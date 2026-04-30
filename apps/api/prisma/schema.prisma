@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompanyRole {
+  EMPLOYEE
+  MANAGER
+  FINANCE
+  ADMIN
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMIT
+  APPROVED
+  REJECTED
+  REIMBURSED
+}
+
+model Company {
+  id   String @id @default(uuid())
+  name String
+
+  users    Membership[]
+  expenses Expense[]
+  policies AmountPolicy[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+
+  memberships Membership[]
+  expenses    Expense[]
+
+  // ✅ REQUIRED (fix for your error)
+  approvedExpenses   Expense[] @relation("ExpenseApprovedBy")
+  reimbursedExpenses Expense[] @relation("ExpenseReimbursedBy")
+
+  logs ExpenseLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Membership {
+  id String @id @default(uuid())
+
+  userId    String
+  companyId String
+
+  role CompanyRole @default(EMPLOYEE)
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  // policy per user per company
+  amountPolicyId String?
+  amountPolicy   AmountPolicy? @relation(fields: [amountPolicyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, companyId])
+}
+
+model AmountPolicy {
+  id        String @id @default(uuid())
+  name      String
+  minAmount Int
+  maxAmount Int
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  members Membership[]
+}
+
+model Expense {
+  id          String        @id @default(uuid())
+  title       String
+  amount      Float
+  description String
+  status      ExpenseStatus @default(DRAFT)
+
+  // 👤 creator
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // 🏢 company scope
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  // ✅ approval
+  approvedById String?
+  approvedBy   User?     @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  // ✅ reimbursement
+  reimbursedById String?
+  reimbursedBy   User?     @relation("ExpenseReimbursedBy", fields: [reimbursedById], references: [id])
+  reimbursedAt   DateTime?
+
+  categories  Category[]          @relation("ExpenseCategories")
+  attachments ExpenseAttachment[]
+  logs        ExpenseLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  expense Expense[] @relation("ExpenseCategories")
+}
+
+model ExpenseAttachment {
+  id String @id @default(uuid())
+
+  fileName String
+  fileUrl  String
+  fileType String?
+  size     Int?
+
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model ExpenseLog {
+  id String @id @default(uuid())
+
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  action  ExpenseStatus
+  message String?
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+}
