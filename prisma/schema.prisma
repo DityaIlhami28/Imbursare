@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMIT
+  APPROVED
+  REJECTED
+  REIMBURSED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+
+  expenses  Expense[]
+
+  amountPolicyId String
+  amountPolicy   AmountPolicy @relation(fields: [amountPolicyId], references: [id])
+
+  // ✅ Approval relations
+  approvedExpenses   Expense[] @relation("ExpenseApprovedBy")
+  reimbursedExpenses Expense[] @relation("ExpenseReimbursedBy")
+
+  // optional logs created by user
+  logs ExpenseLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AmountPolicy {
+  id        String   @id @default(uuid())
+  name      String
+  minAmount Int
+  maxAmount Int
+
+  users     User[]
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  title       String
+  amount      Float
+  description String
+  status      ExpenseStatus @default(DRAFT)
+
+  // 👤 Creator
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  // 📌 Approval
+  approvedById String?
+  approvedBy   User?   @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  // 💸 Reimbursement
+  reimbursedById String?
+  reimbursedBy   User?   @relation("ExpenseReimbursedBy", fields: [reimbursedById], references: [id])
+  reimbursedAt   DateTime?
+
+  // 🏷️ Relations
+  categories  Category[] @relation("ExpenseCategories")
+  attachments ExpenseAttachment[]
+  logs        ExpenseLog[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String
+
+  expense  Expense[] @relation("ExpenseCategories")
+}
+
+model ExpenseAttachment {
+  id         String   @id @default(uuid())
+
+  fileName   String
+  fileUrl    String
+  fileType   String?
+  size       Int?
+
+  expenseId  String
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+}
+
+model ExpenseLog {
+  id         String   @id @default(uuid())
+
+  expenseId  String
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  action     ExpenseStatus
+  message    String?
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt  DateTime @default(now())
+}
