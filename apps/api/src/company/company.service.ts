@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CompanyRole } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+// import { PrismaService } from 'prisma.config';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()

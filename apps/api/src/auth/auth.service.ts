@@ -40,10 +40,6 @@ export class AuthService {
         }
         const membership = user.memberships[0];
 
-        if (!membership) {
-            throw new BadRequestException("User does not belong to any company");
-        }
-
         const payload = { 
             sub: user.id, 
             email: user.email,

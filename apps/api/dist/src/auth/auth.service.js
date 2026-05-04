@@ -76,9 +76,6 @@ let AuthService = class AuthService {
             throw new common_1.BadRequestException("Invalid credentials");
         }
         const membership = user.memberships[0];
-        if (!membership) {
-            throw new common_1.BadRequestException("User does not belong to any company");
-        }
         const payload = {
             sub: user.id,
             email: user.email,

@@ -29,6 +29,7 @@ model Company {
   users    Membership[]
   expenses Expense[]
   policies AmountPolicy[]
+  categories Category[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -120,6 +121,8 @@ model Expense {
 model Category {
   id   String @id @default(uuid())
   name String
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
 
   expense Expense[] @relation("ExpenseCategories")
 }

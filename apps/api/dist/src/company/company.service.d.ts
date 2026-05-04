@@ -5,16 +5,16 @@ export declare class CompanyService {
     constructor(prisma: PrismaService);
     createCompany(userId: string, name: string): Promise<{
         id: string;
-        name: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
     }>;
     addUserToCompany(companyId: string, email: string, role: CompanyRole): Promise<{
         id: string;
         createdAt: Date;
-        role: import(".prisma/client").$Enums.CompanyRole;
         userId: string;
-        amountPolicyId: string | null;
         companyId: string;
+        role: import("@prisma/client").$Enums.CompanyRole;
+        amountPolicyId: string | null;
     }>;
 }
