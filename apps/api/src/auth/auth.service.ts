@@ -1,5 +1,5 @@
 import { UserService } from '@/user/user.service';
-import { Injectable, UnauthorizedException} from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcrypt';
@@ -13,6 +13,10 @@ export class AuthService {
     ) {}
 
     async register(email: string, password: string) {
+        const userExists = await this.userService.findByEmail(email);
+        if (userExists) {
+            throw new BadRequestException("Email already in use");
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await this.userService.createUser({ email, password: hashedPassword });
         
@@ -26,16 +30,26 @@ export class AuthService {
         const user = await this.userService.findByEmail(email);
 
         if (!user) {
-            throw new UnauthorizedException("Invalid credentials");
+            throw new BadRequestException("Invalid credentials");
         }
 
         const valid = await bcrypt.compare(password, user.password);
 
         if (!valid) {
-            throw new UnauthorizedException("Invalid credentials");
+            throw new BadRequestException("Invalid credentials");
+        }
+        const membership = user.memberships[0];
+
+        if (!membership) {
+            throw new BadRequestException("User does not belong to any company");
         }
 
-        const payload = { sub: user.id, email: user.email };
+        const payload = { 
+            sub: user.id, 
+            email: user.email,
+            companyId: membership?.companyId,
+            role: membership?.role
+        };
 
         return {
             access_token: this.jwtService.sign(payload)

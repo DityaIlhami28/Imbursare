@@ -55,6 +55,10 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
     }
     async register(email, password) {
+        const userExists = await this.userService.findByEmail(email);
+        if (userExists) {
+            throw new common_1.BadRequestException("Email already in use");
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await this.userService.createUser({ email, password: hashedPassword });
         return {
@@ -65,13 +69,22 @@ let AuthService = class AuthService {
     async login(email, password) {
         const user = await this.userService.findByEmail(email);
         if (!user) {
-            throw new common_1.UnauthorizedException("Invalid credentials");
+            throw new common_1.BadRequestException("Invalid credentials");
         }
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) {
-            throw new common_1.UnauthorizedException("Invalid credentials");
+            throw new common_1.BadRequestException("Invalid credentials");
         }
-        const payload = { sub: user.id, email: user.email };
+        const membership = user.memberships[0];
+        if (!membership) {
+            throw new common_1.BadRequestException("User does not belong to any company");
+        }
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            companyId: membership?.companyId,
+            role: membership?.role
+        };
         return {
             access_token: this.jwtService.sign(payload)
         };
