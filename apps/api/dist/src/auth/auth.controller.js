@@ -21,7 +21,7 @@ let AuthController = class AuthController {
         this.authService = authService;
     }
     register(data) {
-        return this.authService.register(data.email, data.password);
+        return this.authService.register(data.email, data.password, data.fullName);
     }
     login(data) {
         return this.authService.login(data.email, data.password);

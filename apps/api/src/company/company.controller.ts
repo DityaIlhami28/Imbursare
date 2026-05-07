@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Request, Post, Body } from '@nestjs/common';
+import { Controller, UseGuards, Request, Post, Body, Get } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { roles } from '@/auth/roles/roles.decarator';
@@ -18,6 +18,13 @@ export class CompanyController {
     @roles('ADMIN')
     @Post('add-user')
     addUser(@Request() req, @Body() body: AddUserDto) {
-        return this.companyService.addUserToCompany(req.user.companyId, body.email, body.role);
+        return this.companyService.addUserToCompany(req.user.companyId, body.email, body.role, body.positionLevel, body.fullName);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @roles('ADMIN', 'FINANCE')
+    @Get('employees')
+    getEmployees(@Request() req) {
+        return this.companyService.getCompanyEmployees(req.user.companyId);
     }
 }

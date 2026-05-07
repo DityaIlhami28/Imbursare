@@ -54,16 +54,17 @@ let AuthService = class AuthService {
         this.userService = userService;
         this.jwtService = jwtService;
     }
-    async register(email, password) {
+    async register(email, password, fullName) {
         const userExists = await this.userService.findByEmail(email);
         if (userExists) {
             throw new common_1.BadRequestException("Email already in use");
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await this.userService.createUser({ email, password: hashedPassword });
+        const user = await this.userService.createUser({ email, password: hashedPassword, fullName });
         return {
             id: user.id,
-            email: user.email
+            email: user.email,
+            fullName: user.fullName
         };
     }
     async login(email, password) {

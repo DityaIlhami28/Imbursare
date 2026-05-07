@@ -64,7 +64,7 @@ let CompanyService = class CompanyService {
         }
         const existingMembership = await this.prisma.membership.findFirst({
             where: {
-                userId
+                userId,
             },
         });
         if (existingMembership) {
@@ -81,20 +81,32 @@ let CompanyService = class CompanyService {
         if (existingCompany) {
             throw new common_1.BadRequestException('Company name already exists');
         }
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new common_1.BadRequestException('User not found');
+        }
         return this.prisma.company.create({
             data: {
                 name,
                 users: {
                     create: {
-                        userId,
+                        user: {
+                            connect: { id: userId },
+                        },
                         role: client_1.CompanyRole.ADMIN,
                     },
                 },
             },
         });
     }
-    async addUserToCompany(companyId, email, role) {
+    async addUserToCompany(companyId, email, role, positionLevel, fullName) {
         let user = await this.prisma.user.findUnique({ where: { email } });
+        const positionLevelRecord = await this.prisma.positionLevel.findFirst({
+            where: { name: positionLevel },
+        });
+        if (!positionLevelRecord) {
+            throw new common_1.BadRequestException('Position level not found');
+        }
         if (!user) {
             const password = 'temp123';
             const hashedPassword = await bcrypt.hash(password, 10);
@@ -102,6 +114,8 @@ let CompanyService = class CompanyService {
                 data: {
                     email,
                     password: hashedPassword,
+                    positionLevelId: positionLevelRecord.id,
+                    fullName,
                 },
             });
         }
@@ -112,6 +126,28 @@ let CompanyService = class CompanyService {
                 role,
             },
         });
+    }
+    async getCompanyEmployees(companyId) {
+        const dataEmployees = await this.prisma.membership.findMany({
+            where: {
+                companyId,
+                NOT: {
+                    role: 'ADMIN',
+                },
+            },
+            include: {
+                user: {
+                    include: {
+                        positionLevel: true,
+                    },
+                },
+            },
+        });
+        return dataEmployees.map((item) => ({
+            email: item.user.email,
+            fullName: item.user.fullName,
+            positionLevel: item.user.positionLevel?.name || null,
+        }));
     }
 };
 exports.CompanyService = CompanyService;

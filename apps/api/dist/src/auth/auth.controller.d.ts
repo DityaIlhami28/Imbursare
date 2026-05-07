@@ -5,9 +5,11 @@ export declare class AuthController {
     register(data: {
         email: string;
         password: string;
+        fullName: string;
     }): Promise<{
         id: string;
         email: string;
+        fullName: string | null;
     }>;
     login(data: {
         email: string;

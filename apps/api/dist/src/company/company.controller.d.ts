@@ -6,16 +6,20 @@ export declare class CompanyController {
     constructor(companyService: CompanyService);
     create(req: any, body: CreateCompanyDto): Promise<{
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
     }>;
     addUser(req: any, body: AddUserDto): Promise<{
         id: string;
         createdAt: Date;
+        role: import("@prisma/client").$Enums.CompanyRole;
         userId: string;
         companyId: string;
-        role: import("@prisma/client").$Enums.CompanyRole;
-        amountPolicyId: string | null;
     }>;
+    getEmployees(req: any): Promise<{
+        email: string;
+        fullName: string | null;
+        positionLevel: string | null;
+    }[]>;
 }

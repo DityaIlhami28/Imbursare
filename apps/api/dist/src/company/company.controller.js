@@ -29,7 +29,10 @@ let CompanyController = class CompanyController {
         return this.companyService.createCompany(req.user.userId, body.name);
     }
     addUser(req, body) {
-        return this.companyService.addUserToCompany(req.user.companyId, body.email, body.role);
+        return this.companyService.addUserToCompany(req.user.companyId, body.email, body.role, body.positionLevel, body.fullName);
+    }
+    getEmployees(req) {
+        return this.companyService.getCompanyEmployees(req.user.companyId);
     }
 };
 exports.CompanyController = CompanyController;
@@ -52,6 +55,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, add_user_dto_1.AddUserDto]),
     __metadata("design:returntype", void 0)
 ], CompanyController.prototype, "addUser", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decarator_1.roles)('ADMIN', 'FINANCE'),
+    (0, common_1.Get)('employees'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CompanyController.prototype, "getEmployees", null);
 exports.CompanyController = CompanyController = __decorate([
     (0, common_1.Controller)('companies'),
     __metadata("design:paramtypes", [company_service_1.CompanyService])

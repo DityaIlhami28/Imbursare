@@ -14,7 +14,7 @@ export class UserService {
       },
     });
   }
-  createUser(data: { email: string; password: string }) {
+  createUser(data: { email: string; password: string; positionLevelId?: string; fullName: string }) {
     return this.prisma.user.create({ data });
   }
 }

@@ -26,24 +26,32 @@ model Company {
   id   String @id @default(uuid())
   name String
 
-  users    Membership[]
-  expenses Expense[]
-  policies AmountPolicy[]
-  categories Category[]
+  users          Membership[]
+  expenses       Expense[]
+  policies       AmountPolicy[]
+  categories     Category[]
+  positionLevels PositionLevel[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model User {
-  id       String @id @default(uuid())
-  email    String @unique
+  id       String  @id @default(uuid())
+  email    String  @unique
   password String
+  fullName String?
 
   memberships Membership[]
   expenses    Expense[]
 
-  // ✅ REQUIRED (fix for your error)
+  positionLevelId String?
+  positionLevel   PositionLevel? @relation(fields: [positionLevelId], references: [id])
+
+  supervisorId String?
+  supervisor   User?   @relation("UserSupervisor", fields: [supervisorId], references: [id])
+  subordinates User[]  @relation("UserSupervisor")
+
   approvedExpenses   Expense[] @relation("ExpenseApprovedBy")
   reimbursedExpenses Expense[] @relation("ExpenseReimbursedBy")
 
@@ -64,10 +72,6 @@ model Membership {
   user    User    @relation(fields: [userId], references: [id])
   company Company @relation(fields: [companyId], references: [id])
 
-  // policy per user per company
-  amountPolicyId String?
-  amountPolicy   AmountPolicy? @relation(fields: [amountPolicyId], references: [id])
-
   createdAt DateTime @default(now())
 
   @@unique([userId, companyId])
@@ -79,10 +83,11 @@ model AmountPolicy {
   minAmount Int
   maxAmount Int
 
+  positionLevelId String
+  positionLevel   PositionLevel @relation(fields: [positionLevelId], references: [id])
+
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
-
-  members Membership[]
 }
 
 model Expense {
@@ -119,8 +124,8 @@ model Expense {
 }
 
 model Category {
-  id   String @id @default(uuid())
-  name String
+  id        String  @id @default(uuid())
+  name      String
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 
@@ -154,4 +159,17 @@ model ExpenseLog {
   createdBy   User?   @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+model PositionLevel {
+  id        String  @id @default(uuid())
+  name      String
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  amountPolicy AmountPolicy[]
+  user         User[]
 }
