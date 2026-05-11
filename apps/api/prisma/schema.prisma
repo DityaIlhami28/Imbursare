@@ -82,6 +82,7 @@ model AmountPolicy {
   name      String
   minAmount Int
   maxAmount Int
+  totalTransactions Int
 
   positionLevelId String
   positionLevel   PositionLevel @relation(fields: [positionLevelId], references: [id])

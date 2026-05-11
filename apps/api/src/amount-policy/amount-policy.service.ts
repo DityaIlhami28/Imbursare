@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { CompanyRole } from '@prisma/client';
 
 @Injectable()
-export class PositionLevelService {
+export class AmountPolicyService {
   constructor(private prisma: PrismaService) {}
 
   private async requireAdminOrFinance(userId: string) {
@@ -21,45 +21,47 @@ export class PositionLevelService {
     return membership;
   }
 
-  async getPositionLevels(userId: string) {
+  async getAmountPolicies(userId: string) {
     const membership = await this.requireAdminOrFinance(userId);
-    return this.prisma.positionLevel.findMany({
+    return this.prisma.amountPolicy.findMany({
       where: {
         companyId: membership.companyId,
       },
     });
   }
 
-  async addPositionLevel(userId: string, name: string, companyId: string) {
+  async addAmountPolicy(
+    userId: string,
+    name: string,
+    minAmount: number,
+    maxAmount: number,
+    positionLevel: string,
+    totalTransactions: number,
+    companyId: string,
+  ) {
     await this.requireAdminOrFinance(userId);
 
-    const checkExisting = await this.prisma.positionLevel.findFirst({
+    const checkExisting = await this.prisma.amountPolicy.findFirst({
       where: { name, companyId },
     });
 
     if (checkExisting) {
-      throw new BadRequestException('Position level already exists');
+      throw new BadRequestException('Amount policy already exists');
     }
-
-    return this.prisma.positionLevel.create({
-      data: { name, companyId },
-    });
-  }
-
-  async addPositionLevelToUser(userId: string, positionLevel: string) {
-    await this.requireAdminOrFinance(userId);
 
     const positionLevelRecord = await this.prisma.positionLevel.findFirst({
       where: { name: positionLevel },
     });
 
+
     if (!positionLevelRecord) {
       throw new BadRequestException('Position level not found');
     }
+    
+    const positionLevelId = positionLevelRecord.id;
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { positionLevelId: positionLevelRecord.id },
+    return this.prisma.amountPolicy.create({
+      data: { name, minAmount, maxAmount, positionLevelId, totalTransactions, companyId },
     });
   }
 }

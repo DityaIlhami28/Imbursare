@@ -9,11 +9,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PositionLevelService = void 0;
+exports.AmountPolicyService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const client_1 = require("@prisma/client");
-let PositionLevelService = class PositionLevelService {
+let AmountPolicyService = class AmountPolicyService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
@@ -30,43 +30,37 @@ let PositionLevelService = class PositionLevelService {
         }
         return membership;
     }
-    async getPositionLevels(userId) {
+    async getAmountPolicies(userId) {
         const membership = await this.requireAdminOrFinance(userId);
-        return this.prisma.positionLevel.findMany({
+        return this.prisma.amountPolicy.findMany({
             where: {
                 companyId: membership.companyId,
             },
         });
     }
-    async addPositionLevel(userId, name, companyId) {
+    async addAmountPolicy(userId, name, minAmount, maxAmount, positionLevel, totalTransactions, companyId) {
         await this.requireAdminOrFinance(userId);
-        const checkExisting = await this.prisma.positionLevel.findFirst({
+        const checkExisting = await this.prisma.amountPolicy.findFirst({
             where: { name, companyId },
         });
         if (checkExisting) {
-            throw new common_1.BadRequestException('Position level already exists');
+            throw new common_1.BadRequestException('Amount policy already exists');
         }
-        return this.prisma.positionLevel.create({
-            data: { name, companyId },
-        });
-    }
-    async addPositionLevelToUser(userId, positionLevel) {
-        await this.requireAdminOrFinance(userId);
         const positionLevelRecord = await this.prisma.positionLevel.findFirst({
             where: { name: positionLevel },
         });
         if (!positionLevelRecord) {
             throw new common_1.BadRequestException('Position level not found');
         }
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { positionLevelId: positionLevelRecord.id },
+        const positionLevelId = positionLevelRecord.id;
+        return this.prisma.amountPolicy.create({
+            data: { name, minAmount, maxAmount, positionLevelId, totalTransactions, companyId },
         });
     }
 };
-exports.PositionLevelService = PositionLevelService;
-exports.PositionLevelService = PositionLevelService = __decorate([
+exports.AmountPolicyService = AmountPolicyService;
+exports.AmountPolicyService = AmountPolicyService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
-], PositionLevelService);
-//# sourceMappingURL=position-level.service.js.map
+], AmountPolicyService);
+//# sourceMappingURL=amount-policy.service.js.map
