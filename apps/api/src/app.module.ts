@@ -8,9 +8,10 @@ import { CompanyModule } from './company/company.module';
 import { CategoryModule } from './category/category.module';
 import { PositionLevelModule } from './position-level/position-level.module';
 import { AmountPolicyModule } from './amount-policy/amount-policy.module';
+import { ExpenseModule } from './expense/expense.module';
 
 @Module({
-  imports: [UserModule, AuthModule, PrismaModule, CompanyModule, CategoryModule, PositionLevelModule, AmountPolicyModule],
+  imports: [UserModule, AuthModule, PrismaModule, CompanyModule, CategoryModule, PositionLevelModule, AmountPolicyModule, ExpenseModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -78,10 +78,10 @@ model Membership {
 }
 
 model AmountPolicy {
-  id        String @id @default(uuid())
-  name      String
-  minAmount Int
-  maxAmount Int
+  id                String @id @default(uuid())
+  name              String
+  minAmount         Int
+  maxAmount         Int
   totalTransactions Int
 
   positionLevelId String
@@ -116,7 +116,8 @@ model Expense {
   reimbursedBy   User?     @relation("ExpenseReimbursedBy", fields: [reimbursedById], references: [id])
   reimbursedAt   DateTime?
 
-  categories  Category[]          @relation("ExpenseCategories")
+  categoryId  String
+  category    Category            @relation(fields: [categoryId], references: [id])
   attachments ExpenseAttachment[]
   logs        ExpenseLog[]
 
@@ -130,7 +131,7 @@ model Category {
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 
-  expense Expense[] @relation("ExpenseCategories")
+  expenses Expense[]
 }
 
 model ExpenseAttachment {
