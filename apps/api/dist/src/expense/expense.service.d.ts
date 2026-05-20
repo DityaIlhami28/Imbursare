@@ -51,5 +51,31 @@ export declare class ExpenseService {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
-    addExpense(userId: string, amount: number, description: string, title: string, companyId: string, category: string): Promise<string>;
+    addExpense(userId: string, amount: number, description: string, title: string, companyId: string, category: string, files?: Express.Multer.File[]): Promise<string>;
+    getExpenseById(expenseId: string): Promise<({
+        attachments: {
+            id: string;
+            createdAt: Date;
+            fileName: string;
+            fileUrl: string;
+            fileType: string | null;
+            size: number | null;
+            expenseId: string;
+        }[];
+    } & {
+        id: string;
+        title: string;
+        amount: number;
+        description: string;
+        status: import("@prisma/client").$Enums.ExpenseStatus;
+        userId: string;
+        companyId: string;
+        approvedById: string | null;
+        approvedAt: Date | null;
+        reimbursedById: string | null;
+        reimbursedAt: Date | null;
+        categoryId: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }) | null>;
 }

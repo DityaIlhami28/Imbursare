@@ -13,6 +13,7 @@ exports.ExpenseService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const client_1 = require("@prisma/client");
+const upload_service_1 = require("../storage/upload.service");
 let ExpenseService = class ExpenseService {
     prisma;
     constructor(prisma) {
@@ -56,7 +57,7 @@ let ExpenseService = class ExpenseService {
             },
         });
     }
-    async addExpense(userId, amount, description, title, companyId, category) {
+    async addExpense(userId, amount, description, title, companyId, category, files) {
         const membership = await this.prisma.membership.findFirst({
             where: { userId },
         });
@@ -115,6 +116,29 @@ let ExpenseService = class ExpenseService {
                 categoryId: categoryRecord.id,
             },
         });
+        if (files && files.length > 0) {
+            files.forEach((file) => {
+                if (file.size > 4 * 1024 * 1024) {
+                    throw new common_1.BadRequestException('File size should be less than 4MB');
+                }
+                const IsImage = file.mimetype.startsWith('image/');
+                const IsPdf = file.mimetype === 'application/pdf';
+                const IsDocx = file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                if (!IsImage && !IsPdf && !IsDocx) {
+                    throw new common_1.BadRequestException(`File ${file.originalname} has an invalid type. Only images, PDFs, and Word documents are allowed`);
+                }
+            });
+            const uploaded = await Promise.all(files.map((file) => (0, upload_service_1.uploadToR2)(file)));
+            await this.prisma.expenseAttachment.createMany({
+                data: uploaded.map((file, i) => ({
+                    expenseId: expense.id,
+                    fileName: files[i].originalname,
+                    fileUrl: file.url,
+                    fileType: files[i].mimetype,
+                    size: files[i].size,
+                })),
+            });
+        }
         await this.prisma.expenseLog.create({
             data: {
                 expenseId: expense.id,
@@ -124,6 +148,16 @@ let ExpenseService = class ExpenseService {
             },
         });
         return 'Expense created successfully';
+    }
+    async getExpenseById(expenseId) {
+        return this.prisma.expense.findUnique({
+            where: {
+                id: expenseId,
+            },
+            include: {
+                attachments: true,
+            },
+        });
     }
 };
 exports.ExpenseService = ExpenseService;
