@@ -27,7 +27,7 @@ let AmountPolicyController = class AmountPolicyController {
         return this.amountPolicyService.getAmountPolicies(req.user.userId);
     }
     addAmountPolicy(req, amountPolicyData) {
-        return this.amountPolicyService.addAmountPolicy(req.user.userId, amountPolicyData.name, amountPolicyData.minAmount, amountPolicyData.maxAmount, amountPolicyData.positionLevel, amountPolicyData.totalTransactions, req.user.companyId);
+        return this.amountPolicyService.addAmountPolicy(req.user.userId, amountPolicyData.maxAmount, amountPolicyData.positionLevel, amountPolicyData.totalTransactions, req.user.companyId);
     }
 };
 exports.AmountPolicyController = AmountPolicyController;

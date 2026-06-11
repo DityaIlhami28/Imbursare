@@ -19,18 +19,19 @@ const roles_decarator_1 = require("../auth/roles/roles.decarator");
 const roles_guard_1 = require("../auth/roles/roles.guard");
 const position_level_service_1 = require("./position-level.service");
 let PositionLevelController = class PositionLevelController {
-    positionLevelService;
-    constructor(positionLevelService) {
-        this.positionLevelService = positionLevelService;
+    positionService;
+    constructor(positionService) {
+        this.positionService = positionService;
     }
-    getPositionLevels(req) {
-        return this.positionLevelService.getPositionLevels(req.user.userId);
+    getPosition(req) {
+        return this.positionService.getPosition(req.user.userId);
     }
-    addPositionLevel(req, name) {
-        return this.positionLevelService.addPositionLevel(req.user.userId, name, req.user.companyId);
+    addPosition(req, name, level) {
+        return this.positionService.addPosition(req.user.userId, name, level, req.user.companyId);
     }
-    addPositionLevelToUser(req, positionLevel) {
-        return this.positionLevelService.addPositionLevelToUser(req.user.userId, positionLevel);
+    getPositionDetails(req) {
+        const positionId = req.params.id;
+        return this.positionService.getPositionDetails(req.user.userId, positionId);
     }
 };
 exports.PositionLevelController = PositionLevelController;
@@ -42,29 +43,29 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
-], PositionLevelController.prototype, "getPositionLevels", null);
+], PositionLevelController.prototype, "getPosition", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decarator_1.roles)('ADMIN', 'FINANCE'),
-    (0, common_1.Post)('create-position-level'),
+    (0, common_1.Post)('create-position'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)('name')),
+    __param(2, (0, common_1.Body)('level')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", void 0)
-], PositionLevelController.prototype, "addPositionLevel", null);
+], PositionLevelController.prototype, "addPosition", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decarator_1.roles)('ADMIN', 'FINANCE'),
-    (0, common_1.Post)('assign'),
+    (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Body)('positionLevel')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
-], PositionLevelController.prototype, "addPositionLevelToUser", null);
+], PositionLevelController.prototype, "getPositionDetails", null);
 exports.PositionLevelController = PositionLevelController = __decorate([
-    (0, common_1.Controller)('position-level'),
-    __metadata("design:paramtypes", [position_level_service_1.PositionLevelService])
+    (0, common_1.Controller)('positions'),
+    __metadata("design:paramtypes", [position_level_service_1.PositionService])
 ], PositionLevelController);
 //# sourceMappingURL=position-level.controller.js.map

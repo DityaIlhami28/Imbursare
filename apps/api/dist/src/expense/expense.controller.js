@@ -53,14 +53,14 @@ const roles_decarator_1 = require("../auth/roles/roles.decarator");
 const expense_service_1 = require("./expense.service");
 const platform_express_1 = require("@nestjs/platform-express");
 const multer = __importStar(require("multer"));
+const create_expense_dto_1 = require("./dto/create-expense.dto");
 let ExpenseController = class ExpenseController {
     expenseService;
     constructor(expenseService) {
         this.expenseService = expenseService;
     }
-    async addExpense(req, files, body) {
-        const amount = Number(body.amount);
-        return await this.expenseService.addExpense(req.user.userId, amount, body.description, body.title, req.user.companyId, body.category, files);
+    async addExpense(req, files, dto) {
+        return await this.expenseService.addExpense(dto, req.user.userId, req.user.companyId, files);
     }
     async getMyExpenses(req) {
         return await this.expenseService.getMyExpenses(req.user.id);
@@ -71,8 +71,11 @@ let ExpenseController = class ExpenseController {
     async getCompanyExpensesForFinance(req) {
         return await this.expenseService.getCompanyExpensesForFinance(req.user.id);
     }
-    async getExpenseById(req) {
-        return await this.expenseService.getExpenseById(req.params.id);
+    async getExpenseDetails(req) {
+        return await this.expenseService.getExpenseDetails(req.params.id);
+    }
+    async getExpenseLogs(req) {
+        return await this.expenseService.getExpenseLogs(req.params.id, req.user.id);
     }
 };
 exports.ExpenseController = ExpenseController;
@@ -102,7 +105,7 @@ __decorate([
     __param(1, (0, common_1.UploadedFiles)()),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Array, Object]),
+    __metadata("design:paramtypes", [Object, Array, create_expense_dto_1.CreateExpenseDto]),
     __metadata("design:returntype", Promise)
 ], ExpenseController.prototype, "addExpense", null);
 __decorate([
@@ -138,7 +141,15 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], ExpenseController.prototype, "getExpenseById", null);
+], ExpenseController.prototype, "getExpenseDetails", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.Get)('logs/:id'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ExpenseController.prototype, "getExpenseLogs", null);
 exports.ExpenseController = ExpenseController = __decorate([
     (0, common_1.Controller)('expense'),
     __metadata("design:paramtypes", [expense_service_1.ExpenseService])

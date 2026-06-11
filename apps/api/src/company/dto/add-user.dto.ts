@@ -9,8 +9,5 @@ export class AddUserDto {
   role!: CompanyRole;
 
   @IsString()
-  positionLevel!: string;
-
-  @IsString()
   fullName!: string;
 }

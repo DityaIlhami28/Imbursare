@@ -5,19 +5,19 @@ export declare class AmountPolicyService {
     private requireAdminOrFinance;
     getAmountPolicies(userId: string): Promise<{
         id: string;
-        positionLevelId: string;
-        name: string;
+        createdAt: Date;
+        updatedAt: Date;
         companyId: string;
-        minAmount: number;
+        level: number;
         maxAmount: number;
         totalTransactions: number;
     }[]>;
-    addAmountPolicy(userId: string, name: string, minAmount: number, maxAmount: number, positionLevel: string, totalTransactions: number, companyId: string): Promise<{
+    addAmountPolicy(userId: string, maxAmount: number, positionLevel: string, totalTransactions: number, companyId: string): Promise<{
         id: string;
-        positionLevelId: string;
-        name: string;
+        createdAt: Date;
+        updatedAt: Date;
         companyId: string;
-        minAmount: number;
+        level: number;
         maxAmount: number;
         totalTransactions: number;
     }>;

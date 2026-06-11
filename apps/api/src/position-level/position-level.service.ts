@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CompanyRole } from '@prisma/client';
+// import { AddPositionToUserDto } from './dto/add-user-position.dto';
 
 @Injectable()
-export class PositionLevelService {
+export class PositionService {
   constructor(private prisma: PrismaService) {}
 
   private async requireAdminOrFinance(userId: string) {
@@ -21,45 +22,72 @@ export class PositionLevelService {
     return membership;
   }
 
-  async getPositionLevels(userId: string) {
+  async getPosition(userId: string) {
     const membership = await this.requireAdminOrFinance(userId);
-    return this.prisma.positionLevel.findMany({
-      where: {
-        companyId: membership.companyId,
-      },
+    const positions = await this.prisma.position.findMany({
+      where: { companyId: membership.companyId },
     });
+    return positions.map((pos) => ({
+      id: pos.id,
+      name: pos.name,
+      level: pos.level,
+    })) || [];
   }
 
-  async addPositionLevel(userId: string, name: string, companyId: string) {
+  async getPositionDetails(userId: string, positionId: string) {
     await this.requireAdminOrFinance(userId);
 
-    const checkExisting = await this.prisma.positionLevel.findFirst({
+    const position = await this.prisma.position.findUnique({
+      where: { id: positionId },
+      include: { employees: true },
+    });
+
+    if (!position) {
+      throw new BadRequestException('Position not found');
+    }
+
+    return position;
+  }
+
+  async addPosition(
+    userId: string,
+    name: string,
+    level: string,
+    companyId: string,
+  ) {
+    await this.requireAdminOrFinance(userId);
+
+    const checkExisting = await this.prisma.position.findFirst({
       where: { name, companyId },
     });
 
     if (checkExisting) {
-      throw new BadRequestException('Position level already exists');
+      throw new BadRequestException('Position  already exists');
     }
 
-    return this.prisma.positionLevel.create({
-      data: { name, companyId },
-    });
-  }
+    const positionLevelValue = {
+      staff: 1,
+      supervisor: 2,
+      manager: 3,
+      director: 4,
+      vp: 5,
+      'c-level': 6,
+    };
 
-  async addPositionLevelToUser(userId: string, positionLevel: string) {
-    await this.requireAdminOrFinance(userId);
-
-    const positionLevelRecord = await this.prisma.positionLevel.findFirst({
-      where: { name: positionLevel },
-    });
-
-    if (!positionLevelRecord) {
-      throw new BadRequestException('Position level not found');
+    if (!level) {
+      throw new BadRequestException('positionLevel is required');
     }
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { positionLevelId: positionLevelRecord.id },
+    const normalized = level.toLowerCase().trim();
+
+    const levelValue = positionLevelValue[normalized];
+
+    if (!levelValue) {
+      throw new BadRequestException('Invalid position level');
+    }
+
+    return this.prisma.position.create({
+      data: { name, companyId, level: levelValue },
     });
   }
 }

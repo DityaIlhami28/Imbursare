@@ -15,6 +15,8 @@ import { roles } from '../auth/roles/roles.decarator';
 import { ExpenseService } from './expense.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
+import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 @Controller('expense')
 export class ExpenseController {
@@ -50,16 +52,12 @@ export class ExpenseController {
   async addExpense(
     @Request() req,
     @UploadedFiles() files: Express.Multer.File[],
-    @Body() body,
+    @Body() dto: CreateExpenseDto,
   ) {
-    const amount = Number(body.amount);
     return await this.expenseService.addExpense(
+      dto,
       req.user.userId,
-      amount,
-      body.description,
-      body.title,
       req.user.companyId,
-      body.category,
       files,
     );
   }
@@ -86,7 +84,13 @@ export class ExpenseController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id')
-  async getExpenseById(@Request() req) {
-    return await this.expenseService.getExpenseById(req.params.id);
+  async getExpenseDetails(@Request() req) {
+    return await this.expenseService.getExpenseDetails(req.params.id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('logs/:id')
+  async getExpenseLogs(@Request() req) {
+    return await this.expenseService.getExpenseLogs(req.params.id, req.user.id);
   }
 }

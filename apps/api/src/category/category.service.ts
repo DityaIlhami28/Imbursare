@@ -15,7 +15,6 @@ export class CategoryService {
         },
       },
     });
-    console.log('checkMembership', checkMembership);
 
     if (
       checkMembership?.role !== CompanyRole.ADMIN &&

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CompanyRole } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
 @Injectable()
 export class CompanyService {
@@ -50,11 +51,9 @@ export class CompanyService {
     return this.prisma.company.create({
       data: {
         name,
-        users: {
+        memberships: {
           create: {
-            user: {
-              connect: { id: userId },
-            },
+            userId,
             role: CompanyRole.ADMIN,
           },
         },
@@ -64,19 +63,11 @@ export class CompanyService {
 
   async addUserToCompany(
     companyId: string,
+    fullName: string,
     email: string,
     role: CompanyRole,
-    positionLevel: string,
-    fullName: string,
   ) {
     let user = await this.prisma.user.findUnique({ where: { email } });
-    const positionLevelRecord = await this.prisma.positionLevel.findFirst({
-      where: { name: positionLevel },
-    });
-
-    if (!positionLevelRecord) {
-      throw new BadRequestException('Position level not found');
-    }
 
     if (!user) {
       const password = 'temp123';
@@ -85,8 +76,14 @@ export class CompanyService {
         data: {
           email,
           password: hashedPassword,
-          positionLevelId: positionLevelRecord.id,
+        },
+      });
+      const createdEmployee = await this.prisma.employee.create({
+        data: {
+          email,
           fullName,
+          companyId,
+          userId: user.id,
         },
       });
     }
@@ -101,26 +98,94 @@ export class CompanyService {
   }
 
   async getCompanyEmployees(companyId: string) {
-    const dataEmployees = await this.prisma.membership.findMany({
+    const dataEmployees = await this.prisma.employee.findMany({
       where: {
         companyId,
-        NOT: {
-          role: 'ADMIN',
-        },
       },
       include: {
-        user: {
-          include: {
-            positionLevel: true,
-          },
-        },
+        position: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
       },
     });
+    return dataEmployees.map((employee) => ({
+      id: employee.id,
+      email: employee.email,
+      fullName: employee.fullName,
+      position: employee.position ? {
+        id: employee.position.id,
+        name: employee.position.name,
+      } : null,
+      unit: employee.unit,
+    })) || [];
+  }
 
-    return dataEmployees.map((item) => ({
-      email: item.user.email,
-      fullName: item.user.fullName,
-      positionLevel: item.user.positionLevel?.name || null,
-    }));
+  async getEmployeeDetails(employeeId: string, companyId: string) {
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId, companyId: companyId },
+      include: {
+        position: true,
+        subordinates: true,
+      },
+    });
+    if (!employee) {
+      throw new BadRequestException('Employee not found');
+    }
+    const supervisor = employee.supervisorId
+      ? await this.prisma.employee.findUnique({
+          where: { id: employee.supervisorId },
+        })
+      : null;
+    const subordinates = employee.subordinates.map((sub) => ({
+      id: sub.id,
+      fullName: sub.fullName,
+    })) || [];
+
+    return {
+      id: employee.id,
+      email: employee.email,
+      fullName: employee.fullName,
+      position: employee.position ?{
+        id: employee.position.id,
+        name: employee.position.name,
+      } : null,
+      address: employee.address,
+      phone: employee.phone,
+      unit: employee.unit,
+      supervisor: supervisor ? {
+        id: supervisor.id,
+        fullName: supervisor.fullName,
+      } : null,
+      subordinates: subordinates,
+    };
+  }
+
+  async updateEmployeeData(
+    employeeId: string,
+    dto: UpdateEmployeeDto,
+    userId: string,
+  ) {
+    const checkUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!checkUser) {
+      throw new BadRequestException('User not found');
+    }
+    if (dto.supervisorId === employeeId) {
+    throw new BadRequestException(
+      'Employee cannot be their own supervisor',
+    );
+  }
+
+    return this.prisma.employee.update({
+    where: { id: employeeId },
+    data: dto,
+    include: {
+      position: true,
+      supervisor: true,
+    },
+  });
   }
 }

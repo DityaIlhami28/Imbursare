@@ -38,23 +38,39 @@ let AmountPolicyService = class AmountPolicyService {
             },
         });
     }
-    async addAmountPolicy(userId, name, minAmount, maxAmount, positionLevel, totalTransactions, companyId) {
+    async addAmountPolicy(userId, maxAmount, positionLevel, totalTransactions, companyId) {
         await this.requireAdminOrFinance(userId);
+        const positionLevelValue = {
+            "staff": 1,
+            "supervisor": 2,
+            "manager": 3,
+            "director": 4,
+            "vp": 5,
+            "c-level": 6,
+        };
+        const level = positionLevelValue[positionLevel.toLowerCase()];
+        if (!level) {
+            throw new common_1.BadRequestException('Invalid position level');
+        }
         const checkExisting = await this.prisma.amountPolicy.findFirst({
-            where: { name, companyId },
+            where: { level, companyId },
         });
         if (checkExisting) {
             throw new common_1.BadRequestException('Amount policy already exists');
         }
-        const positionLevelRecord = await this.prisma.positionLevel.findFirst({
-            where: { name: positionLevel },
+        const positionLevelRecord = await this.prisma.position.findFirst({
+            where: { level },
         });
         if (!positionLevelRecord) {
             throw new common_1.BadRequestException('Position level not found');
         }
-        const positionLevelId = positionLevelRecord.id;
         return this.prisma.amountPolicy.create({
-            data: { name, minAmount, maxAmount, positionLevelId, totalTransactions, companyId },
+            data: {
+                maxAmount,
+                level,
+                totalTransactions,
+                companyId
+            },
         });
     }
 };

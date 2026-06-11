@@ -18,7 +18,7 @@ exports.PositionLevelModule = PositionLevelModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule],
         controllers: [position_level_controller_1.PositionLevelController],
-        providers: [position_level_service_1.PositionLevelService],
+        providers: [position_level_service_1.PositionService],
     })
 ], PositionLevelModule);
 //# sourceMappingURL=position-level.module.js.map

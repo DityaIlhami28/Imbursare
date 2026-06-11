@@ -17,7 +17,7 @@ let UserService = class UserService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    findByEmail(email) {
+    async findByEmail(email) {
         return this.prisma.user.findUnique({
             where: { email },
             include: {
@@ -25,7 +25,27 @@ let UserService = class UserService {
             },
         });
     }
-    createUser(data) {
+    async getProfile(id) {
+        const data = await this.prisma.user.findUnique({
+            where: { id },
+            include: {
+                memberships: {
+                    include: {
+                        company: true,
+                    },
+                },
+            },
+        });
+        if (!data) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return {
+            email: data.email,
+            company: data.memberships?.[0]?.company?.name || null,
+            role: data.memberships?.[0]?.role || null,
+        };
+    }
+    async createUser(data) {
         return this.prisma.user.create({ data });
     }
 };

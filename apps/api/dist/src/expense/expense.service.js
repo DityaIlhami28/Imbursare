@@ -32,11 +32,18 @@ let ExpenseService = class ExpenseService {
         return membership;
     }
     async getMyExpenses(userId) {
-        return this.prisma.expense.findMany({
+        const myExpenses = await this.prisma.expense.findMany({
             where: {
                 userId,
             },
         });
+        return myExpenses.map((expense) => ({
+            id: expense.id,
+            title: expense.title,
+            amount: expense.amount,
+            status: expense.status,
+            createdAt: expense.createdAt,
+        })) || [];
     }
     async getCompanyExpensesForAdmin(userId) {
         const membership = await this.requireAdminOrFinance(userId);
@@ -48,24 +55,32 @@ let ExpenseService = class ExpenseService {
     }
     async getCompanyExpensesForFinance(userId) {
         const membership = await this.requireAdminOrFinance(userId);
+        const checkUnit = await this.prisma.employee.findFirst({
+            where: { userId },
+        });
+        if (!checkUnit || !checkUnit.unit) {
+            throw new common_1.BadRequestException('Unit not found for this user');
+        }
         return this.prisma.expense.findMany({
             where: {
+                unit: checkUnit.unit,
                 companyId: membership.companyId,
                 status: {
-                    in: ['APPROVED', 'REIMBURSED']
-                }
+                    in: ['APPROVED', 'REIMBURSED'],
+                },
             },
-        });
+        }) || [];
     }
-    async addExpense(userId, amount, description, title, companyId, category, files) {
+    async addExpense(dto, userId, companyId, files) {
         const membership = await this.prisma.membership.findFirst({
             where: { userId },
         });
+        const amount = Number(dto.amount);
         if (!membership) {
             throw new common_1.BadRequestException('You are not authorized');
         }
         const categoryRecord = await this.prisma.category.findFirst({
-            where: { name: category, companyId },
+            where: { name: dto.category, companyId: companyId },
         });
         if (!categoryRecord) {
             throw new common_1.BadRequestException('Category not found');
@@ -73,18 +88,31 @@ let ExpenseService = class ExpenseService {
         const checkUser = await this.prisma.user.findFirst({
             where: { id: userId },
         });
-        if (checkUser) {
-            if (!checkUser.positionLevelId) {
-                throw new common_1.BadRequestException('Position level not found');
-            }
-        }
-        else {
+        if (!checkUser) {
             throw new common_1.BadRequestException('User not found');
+        }
+        const checkEmployee = await this.prisma.employee.findFirst({
+            where: { userId },
+        });
+        if (!checkEmployee) {
+            throw new common_1.BadRequestException('Employee not found');
+        }
+        if (!checkEmployee.positionId) {
+            throw new common_1.BadRequestException('Position not found');
+        }
+        if (!checkEmployee.unit) {
+            throw new common_1.BadRequestException('Unit not found');
+        }
+        const checkLevelEmployee = await this.prisma.position.findFirst({
+            where: { id: checkEmployee.positionId },
+        });
+        if (!checkLevelEmployee) {
+            throw new common_1.BadRequestException('Position not found');
         }
         const checkAmountPolicy = await this.prisma.amountPolicy.findFirst({
             where: {
-                companyId,
-                positionLevelId: checkUser.positionLevelId,
+                companyId: companyId,
+                level: checkLevelEmployee.level,
             },
         });
         if (checkAmountPolicy) {
@@ -95,8 +123,8 @@ let ExpenseService = class ExpenseService {
                 where: {
                     userId,
                     status: {
-                        notIn: ["REIMBURSED", "REJECTED"]
-                    }
+                        in: ['DRAFT', 'SUBMIT', 'APPROVED'],
+                    },
                 },
             });
             if (checkTotalTransactions >= checkAmountPolicy.totalTransactions) {
@@ -108,12 +136,13 @@ let ExpenseService = class ExpenseService {
         }
         const expense = await this.prisma.expense.create({
             data: {
-                amount,
-                description,
-                title,
-                userId,
-                companyId,
+                amount: amount,
+                description: dto.description ?? '',
+                title: dto.title ?? '',
+                userId: userId,
+                companyId: companyId,
                 categoryId: categoryRecord.id,
+                unit: checkEmployee.unit ?? undefined,
             },
         });
         if (files && files.length > 0) {
@@ -123,7 +152,8 @@ let ExpenseService = class ExpenseService {
                 }
                 const IsImage = file.mimetype.startsWith('image/');
                 const IsPdf = file.mimetype === 'application/pdf';
-                const IsDocx = file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                const IsDocx = file.mimetype ===
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                 if (!IsImage && !IsPdf && !IsDocx) {
                     throw new common_1.BadRequestException(`File ${file.originalname} has an invalid type. Only images, PDFs, and Word documents are allowed`);
                 }
@@ -147,17 +177,64 @@ let ExpenseService = class ExpenseService {
                 createdById: userId,
             },
         });
-        return 'Expense created successfully';
+        return {
+            message: 'Expense created successfully',
+            expenseId: expense.id,
+            status: expense.status,
+        };
     }
-    async getExpenseById(expenseId) {
-        return this.prisma.expense.findUnique({
+    async getExpenseDetails(expenseId) {
+        const expenseDetails = await this.prisma.expense.findUnique({
             where: {
                 id: expenseId,
             },
             include: {
                 attachments: true,
+                category: true,
             },
         });
+        if (!expenseDetails) {
+            throw new common_1.BadRequestException('Expense not found');
+        }
+        return {
+            id: expenseDetails.id,
+            title: expenseDetails.title,
+            description: expenseDetails.description,
+            amount: expenseDetails.amount,
+            status: expenseDetails.status,
+            attachments: expenseDetails.attachments ? expenseDetails.attachments.map((attachment) => ({
+                id: attachment.id,
+                fileName: attachment.fileName,
+                fileUrl: attachment.fileUrl,
+                fileType: attachment.fileType,
+                size: attachment.size,
+            })) : [],
+            category: expenseDetails.category ? {
+                id: expenseDetails.category.id,
+                name: expenseDetails.category.name,
+            } : null,
+            createdAt: expenseDetails.createdAt,
+        };
+    }
+    async getExpenseLogs(expenseId, userId) {
+        const checkUser = await this.prisma.user.findFirst({
+            where: { id: userId },
+        });
+        if (!checkUser) {
+            throw new common_1.BadRequestException('User not found');
+        }
+        const logs = await this.prisma.expenseLog.findMany({
+            where: {
+                expenseId,
+            },
+        });
+        return logs.map((log) => ({
+            id: log.id,
+            action: log.action,
+            message: log.message,
+            createdById: log.createdById,
+            createdAt: log.createdAt,
+        }));
     }
 };
 exports.ExpenseService = ExpenseService;

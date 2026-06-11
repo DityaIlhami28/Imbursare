@@ -5,11 +5,15 @@ export declare class CategoryService {
     createCategory(userId: string, companyId: string, name: string): Promise<{
         id: string;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
         companyId: string;
     }>;
     getCategories(companyId: string): Promise<{
         id: string;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
         companyId: string;
     }[]>;
 }

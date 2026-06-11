@@ -32,8 +32,6 @@ export class AmountPolicyService {
 
   async addAmountPolicy(
     userId: string,
-    name: string,
-    minAmount: number,
     maxAmount: number,
     positionLevel: string,
     totalTransactions: number,
@@ -41,16 +39,31 @@ export class AmountPolicyService {
   ) {
     await this.requireAdminOrFinance(userId);
 
+    const positionLevelValue = {
+      "staff": 1,
+      "supervisor": 2,
+      "manager": 3,
+      "director": 4,
+      "vp": 5,
+      "c-level": 6,
+    };
+
+    const level = positionLevelValue[positionLevel.toLowerCase()];
+
+    if (!level) {
+      throw new BadRequestException('Invalid position level');
+    }
+
     const checkExisting = await this.prisma.amountPolicy.findFirst({
-      where: { name, companyId },
+      where: { level, companyId },
     });
 
     if (checkExisting) {
       throw new BadRequestException('Amount policy already exists');
     }
 
-    const positionLevelRecord = await this.prisma.positionLevel.findFirst({
-      where: { name: positionLevel },
+    const positionLevelRecord = await this.prisma.position.findFirst({
+      where: { level },
     });
 
 
@@ -58,10 +71,13 @@ export class AmountPolicyService {
       throw new BadRequestException('Position level not found');
     }
     
-    const positionLevelId = positionLevelRecord.id;
-
     return this.prisma.amountPolicy.create({
-      data: { name, minAmount, maxAmount, positionLevelId, totalTransactions, companyId },
+      data: {
+        maxAmount,
+        level,
+        totalTransactions,
+        companyId
+      },
     });
   }
 }

@@ -12,18 +12,17 @@ export class AuthService {
         private jwtService: JwtService
     ) {}
 
-    async register(email: string, password: string, fullName: string) {
+    async register(email: string, password: string ) {
         const userExists = await this.userService.findByEmail(email);
         if (userExists) {
             throw new BadRequestException("Email already in use");
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await this.userService.createUser({ email, password: hashedPassword, fullName });
+        const user = await this.userService.createUser({ email, password: hashedPassword });
         
         return {
             id: user.id,
             email: user.email,
-            fullName: user.fullName
         };
     }
 
@@ -39,6 +38,10 @@ export class AuthService {
         if (!valid) {
             throw new BadRequestException("Invalid credentials");
         }
+        if (user.state !== 1) {
+            throw new UnauthorizedException("User is inactive");
+        }
+        
         const membership = user.memberships[0];
 
         const payload = { 

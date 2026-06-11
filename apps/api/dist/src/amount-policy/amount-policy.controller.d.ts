@@ -4,19 +4,19 @@ export declare class AmountPolicyController {
     constructor(amountPolicyService: AmountPolicyService);
     getAmountPolicies(req: any): Promise<{
         id: string;
-        positionLevelId: string;
-        name: string;
+        createdAt: Date;
+        updatedAt: Date;
         companyId: string;
-        minAmount: number;
+        level: number;
         maxAmount: number;
         totalTransactions: number;
     }[]>;
     addAmountPolicy(req: any, amountPolicyData: any): Promise<{
         id: string;
-        positionLevelId: string;
-        name: string;
+        createdAt: Date;
+        updatedAt: Date;
         companyId: string;
-        minAmount: number;
+        level: number;
         maxAmount: number;
         totalTransactions: number;
     }>;

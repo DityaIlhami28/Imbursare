@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PositionLevelService } from './position-level.service';
+import { PositionService } from './position-level.service';
 import { PositionLevelController } from './position-level.controller';
 import { PrismaModule } from 'prisma/prisma.module';
 
@@ -7,6 +7,6 @@ import { PrismaModule } from 'prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [PositionLevelController],
-  providers: [PositionLevelService],
+  providers: [PositionService],
 })
 export class PositionLevelModule {}

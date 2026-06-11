@@ -2,7 +2,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 export declare class UserService {
     private prisma;
     constructor(prisma: PrismaService);
-    findByEmail(email: string): import("@prisma/client").Prisma.Prisma__UserClient<({
+    findByEmail(email: string): Promise<({
         memberships: {
             id: string;
             createdAt: Date;
@@ -14,25 +14,24 @@ export declare class UserService {
         id: string;
         email: string;
         password: string;
-        fullName: string | null;
-        positionLevelId: string | null;
-        supervisorId: string | null;
+        state: number;
         createdAt: Date;
         updatedAt: Date;
-    }) | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    }) | null>;
+    getProfile(id: string): Promise<{
+        email: string;
+        company: string | null;
+        role: import("@prisma/client").$Enums.CompanyRole;
+    }>;
     createUser(data: {
         email: string;
         password: string;
-        positionLevelId?: string;
-        fullName: string;
-    }): import("@prisma/client").Prisma.Prisma__UserClient<{
+    }): Promise<{
         id: string;
         email: string;
         password: string;
-        fullName: string | null;
-        positionLevelId: string | null;
-        supervisorId: string | null;
+        state: number;
         createdAt: Date;
         updatedAt: Date;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    }>;
 }

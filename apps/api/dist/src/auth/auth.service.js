@@ -54,17 +54,16 @@ let AuthService = class AuthService {
         this.userService = userService;
         this.jwtService = jwtService;
     }
-    async register(email, password, fullName) {
+    async register(email, password) {
         const userExists = await this.userService.findByEmail(email);
         if (userExists) {
             throw new common_1.BadRequestException("Email already in use");
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await this.userService.createUser({ email, password: hashedPassword, fullName });
+        const user = await this.userService.createUser({ email, password: hashedPassword });
         return {
             id: user.id,
             email: user.email,
-            fullName: user.fullName
         };
     }
     async login(email, password) {
@@ -75,6 +74,9 @@ let AuthService = class AuthService {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) {
             throw new common_1.BadRequestException("Invalid credentials");
+        }
+        if (user.state !== 1) {
+            throw new common_1.UnauthorizedException("User is inactive");
         }
         const membership = user.memberships[0];
         const payload = {

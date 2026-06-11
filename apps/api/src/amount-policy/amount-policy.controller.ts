@@ -21,8 +21,6 @@ export class AmountPolicyController {
   addAmountPolicy(@Request() req, @Body() amountPolicyData: any) {
     return this.amountPolicyService.addAmountPolicy(
       req.user.userId,
-      amountPolicyData.name,
-      amountPolicyData.minAmount,
       amountPolicyData.maxAmount,
       amountPolicyData.positionLevel,
       amountPolicyData.totalTransactions,

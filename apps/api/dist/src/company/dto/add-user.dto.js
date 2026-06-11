@@ -15,7 +15,6 @@ const class_validator_1 = require("class-validator");
 class AddUserDto {
     email;
     role;
-    positionLevel;
     fullName;
 }
 exports.AddUserDto = AddUserDto;
@@ -27,10 +26,6 @@ __decorate([
     (0, class_validator_1.IsEnum)(client_1.CompanyRole),
     __metadata("design:type", String)
 ], AddUserDto.prototype, "role", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], AddUserDto.prototype, "positionLevel", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
