@@ -12,7 +12,7 @@ export class PositionLevelController {
   @roles('ADMIN', 'FINANCE')
   @Get()
   getPosition(@Request() req) {
-    return this.positionService.getPosition(req.user.userId);
+    return this.positionService.getPosition(req.user.userId, req.user.companyId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,6 +27,6 @@ export class PositionLevelController {
   @Get(':id')
   getPositionDetails(@Request() req) {
     const positionId = req.params.id;
-    return this.positionService.getPositionDetails(req.user.userId, positionId);
+    return this.positionService.getPositionDetails(req.user.userId, req.user.companyId, positionId);
   }
 }

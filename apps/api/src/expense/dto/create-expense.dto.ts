@@ -4,6 +4,7 @@ import {
   IsUUID,
   IsOptional,
   Min,
+  isString,
 } from 'class-validator';
 
 export class CreateExpenseDto {
@@ -14,8 +15,8 @@ export class CreateExpenseDto {
   @IsString()
   description?: string;
 
-  @IsString()
-  amount?: string;
+  @IsOptional()
+  amount?: number;
 
   @IsString()
   category?: string;
@@ -24,4 +25,5 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsString()
   unit?: string;
+
 }

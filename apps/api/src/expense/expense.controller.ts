@@ -65,32 +65,32 @@ export class ExpenseController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('my-expenses')
   async getMyExpenses(@Request() req) {
-    return await this.expenseService.getMyExpenses(req.user.id);
+    return await this.expenseService.getMyExpenses(req.user.userId, req.user.companyId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @roles('ADMIN')
   @Get('company-expenses-for-admin')
   async getCompanyExpensesForAdmin(@Request() req) {
-    return await this.expenseService.getCompanyExpensesForAdmin(req.user.id);
+    return await this.expenseService.getCompanyExpensesForAdmin(req.user.userId, req.user.companyId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @roles('FINANCE')
   @Get('company-expenses-for-finance')
   async getCompanyExpensesForFinance(@Request() req) {
-    return await this.expenseService.getCompanyExpensesForFinance(req.user.id);
+    return await this.expenseService.getCompanyExpensesForFinance(req.user.userId, req.user.companyId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id')
   async getExpenseDetails(@Request() req) {
-    return await this.expenseService.getExpenseDetails(req.params.id);
+    return await this.expenseService.getExpenseDetails(req.params.id, req.user.userId, req.user.companyId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('logs/:id')
   async getExpenseLogs(@Request() req) {
-    return await this.expenseService.getExpenseLogs(req.params.id, req.user.id);
+    return await this.expenseService.getExpenseLogs(req.params.id, req.user.userId, req.user.companyId);
   }
 }

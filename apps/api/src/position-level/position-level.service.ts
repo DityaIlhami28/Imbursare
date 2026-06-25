@@ -7,11 +7,12 @@ import { CompanyRole } from '@prisma/client';
 export class PositionService {
   constructor(private prisma: PrismaService) {}
 
-  private async requireAdminOrFinance(userId: string) {
+  private async checkUserAuthorization(userId: string, companyId: string) {
     const membership = await this.prisma.membership.findFirst({
       where: {
         userId,
-        role: { in: [CompanyRole.ADMIN, CompanyRole.FINANCE] },
+        companyId,
+        role: CompanyRole.ADMIN,
       },
     });
 
@@ -22,10 +23,10 @@ export class PositionService {
     return membership;
   }
 
-  async getPosition(userId: string) {
-    const membership = await this.requireAdminOrFinance(userId);
+  async getPosition(userId: string, companyId: string) {
+    await this.checkUserAuthorization(userId, companyId);
     const positions = await this.prisma.position.findMany({
-      where: { companyId: membership.companyId },
+      where: { companyId },
     });
     return positions.map((pos) => ({
       id: pos.id,
@@ -34,8 +35,8 @@ export class PositionService {
     })) || [];
   }
 
-  async getPositionDetails(userId: string, positionId: string) {
-    await this.requireAdminOrFinance(userId);
+  async getPositionDetails(userId: string, companyId: string, positionId: string) {
+    await this.checkUserAuthorization(userId, companyId);
 
     const position = await this.prisma.position.findUnique({
       where: { id: positionId },
@@ -55,7 +56,7 @@ export class PositionService {
     level: string,
     companyId: string,
   ) {
-    await this.requireAdminOrFinance(userId);
+    await this.checkUserAuthorization(userId, companyId);
 
     const checkExisting = await this.prisma.position.findFirst({
       where: { name, companyId },
