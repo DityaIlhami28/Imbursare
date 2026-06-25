@@ -25,7 +25,6 @@ export class CompanyService {
         userId,
       },
     });
-
     if (existingMembership) {
       throw new BadRequestException('You already belong to a company');
     }
