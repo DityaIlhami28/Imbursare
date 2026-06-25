@@ -1,0 +1,10 @@
+{
+  "name": "imbursare",
+  "private": true,
+  "scripts": {
+    "dev:api": "npm --prefix apps/api run start:dev",
+    "dev:web": "npm --prefix apps/web run dev -- --port 3001",
+    "dev": "start cmd /k \"npm run dev:api\" && start cmd /k \"npm run dev:web\""
+  }
+}
+
