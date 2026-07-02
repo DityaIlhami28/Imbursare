@@ -6,6 +6,7 @@ const statusConfig: Record<ExpenseStatus, { label: string; className: string }> 
   APPROVED: { label: 'Approved', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
   REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
   REIMBURSED: { label: 'Reimbursed', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  REVISION: { label: 'Needs Revision', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
 }
 
 export function StatusBadge({ status }: { status: string }) {

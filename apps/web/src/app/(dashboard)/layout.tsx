@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getToken, clearToken, parseToken, type TokenPayload } from '@/lib/auth'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { Toaster } from 'sonner'
 import {
   Receipt,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import {
   Building2,
   Menu,
   X,
+  ClipboardCheck,
 } from 'lucide-react'
 
 interface NavItem {
@@ -29,20 +31,35 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'My Expenses', href: '/expenses', icon: FileText },
-  { label: 'Employees', href: '/employees', icon: Users, roles: ['ADMIN'] },
-  { label: 'Positions', href: '/positions', icon: Briefcase, roles: ['ADMIN', 'FINANCE'] },
-  { label: 'Categories', href: '/categories', icon: Tag, roles: ['ADMIN', 'FINANCE'] },
-  { label: 'Spending Policies', href: '/policies', icon: Shield, roles: ['ADMIN', 'FINANCE'] },
   { label: 'All Expenses', href: '/admin/expenses', icon: CreditCard, roles: ['ADMIN'] },
   { label: 'Unit Expenses', href: '/finance/expenses', icon: CreditCard, roles: ['FINANCE'] },
+  { label: 'My Expenses', href: '/expenses', icon: FileText, roles: ['EMPLOYEE', 'FINANCE'] },
+  { label: 'Approve Requests', href: '/approve-requests', icon: ClipboardCheck, roles: ['EMPLOYEE', 'FINANCE'] },
+  { label: 'Employees', href: '/employees', icon: Users, roles: ['ADMIN'] },
+  { label: 'Positions', href: '/positions', icon: Briefcase, roles: ['ADMIN'] },
+  { label: 'Categories', href: '/categories', icon: Tag, roles: ['ADMIN', 'FINANCE'] },
+  { label: 'Spending Policies', href: '/policies', icon: Shield, roles: ['ADMIN', 'FINANCE'] },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<TokenPayload | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const fromParam = searchParams.get('from')
+  const isExpenseDetail = /^\/expenses\/.+/.test(pathname)
+
+  function getActive(item: NavItem, role: string | undefined): boolean {
+    if (isExpenseDetail) {
+      if (fromParam === 'approve-requests') return item.href === '/approve-requests'
+      if (role === 'ADMIN')   return item.href === '/admin/expenses'
+      if (role === 'FINANCE') return item.href === '/finance/expenses'
+      return item.href === '/expenses'
+    }
+    return pathname === item.href || pathname.startsWith(item.href + '/')
+  }
 
   useEffect(() => {
     const token = getToken()
@@ -102,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
         {visibleNav.map((item) => {
           const Icon = item.icon
-          const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          const active = getActive(item, user?.role)
           return (
             <Link
               key={item.href}
@@ -178,6 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+      <Toaster richColors position="top-right" />
     </div>
   )
 }

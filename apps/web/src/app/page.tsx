@@ -192,8 +192,7 @@ export default function Home() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
-                className="px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+                className="px-8 bg-accent text-accent-foreground hover:bg-accent/90"
                 render={<Link href="/login" />}
               >
                 Sign in

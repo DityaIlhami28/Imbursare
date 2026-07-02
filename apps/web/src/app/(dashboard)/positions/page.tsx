@@ -5,7 +5,8 @@ import { getToken } from '@/lib/auth'
 import { api, type Position } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Briefcase, Plus, X } from 'lucide-react'
+import { Briefcase, Plus, X, Search } from 'lucide-react'
+import { Pagination } from '@/components/ui/pagination'
 
 const LEVELS = ['staff', 'supervisor', 'manager', 'director', 'vp', 'c-level'] as const
 type Level = (typeof LEVELS)[number]
@@ -24,6 +25,9 @@ export default function PositionsPage() {
   const [form, setForm] = useState({ name: '', positionLevel: 'staff' as Level })
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     load()
@@ -55,6 +59,13 @@ export default function PositionsPage() {
       setSaving(false)
     }
   }
+
+  const sorted = [...positions].sort((a, b) => a.level - b.level)
+  const filtered = sorted.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (levelLabel[p.level] ?? '').toLowerCase().includes(search.toLowerCase())
+  )
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <div className="space-y-6">
@@ -103,9 +114,21 @@ export default function PositionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Briefcase className="h-4 w-4" /> All Positions ({positions.length})
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Briefcase className="h-4 w-4" /> All Positions ({filtered.length})
+            </CardTitle>
+            <div className="relative w-full sm:w-52">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search name or level…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring transition-shadow"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -114,16 +137,17 @@ export default function PositionsPage() {
             </div>
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
-          ) : positions.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="text-center py-12">
               <Briefcase className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">No positions defined yet.</p>
+              <p className="text-muted-foreground text-sm">
+                {search ? 'No positions match your search.' : 'No positions defined yet.'}
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {positions
-                .sort((a, b) => a.level - b.level)
-                .map((pos) => (
+            <>
+              <div className="divide-y divide-border">
+                {paginated.map((pos) => (
                   <div key={pos.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                     <div>
                       <p className="text-sm font-medium text-foreground">{pos.name}</p>
@@ -133,7 +157,15 @@ export default function PositionsPage() {
                     </span>
                   </div>
                 ))}
-            </div>
+              </div>
+              <Pagination
+                total={filtered.length}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+              />
+            </>
           )}
         </CardContent>
       </Card>

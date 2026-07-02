@@ -7,12 +7,15 @@ import { api, type EmployeeSummary } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, Plus, ChevronRight } from 'lucide-react'
+import { Pagination } from '@/components/ui/pagination'
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<EmployeeSummary[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     const token = getToken()
@@ -29,6 +32,7 @@ export default function EmployeesPage() {
       e.email.toLowerCase().includes(search.toLowerCase()) ||
       (e.unit ?? '').toLowerCase().includes(search.toLowerCase())
   )
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <div className="space-y-6">
@@ -47,7 +51,7 @@ export default function EmployeesPage() {
           type="text"
           placeholder="Search by name, email, or unit…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           className="w-full max-w-sm rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-shadow"
         />
       </div>
@@ -80,38 +84,47 @@ export default function EmployeesPage() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {filtered.map((emp) => (
-                <Link
-                  key={emp.id}
-                  href={`/employees/${emp.id}`}
-                  className="flex items-center justify-between py-3 px-2 -mx-2 first:pt-0 last:pb-0 hover:bg-accent/50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-sm font-semibold text-primary">
-                        {emp.fullName.charAt(0).toUpperCase()}
-                      </span>
+            <>
+              <div className="divide-y divide-border">
+                {paginated.map((emp) => (
+                  <Link
+                    key={emp.id}
+                    href={`/employees/${emp.id}`}
+                    className="flex items-center justify-between py-3 px-2 -mx-2 first:pt-0 last:pb-0 hover:bg-accent/50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-semibold text-primary">
+                          {emp.fullName.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{emp.fullName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{emp.fullName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      <div className="text-right hidden sm:block">
+                        {emp.position && (
+                          <p className="text-xs font-medium text-foreground">{emp.position.name}</p>
+                        )}
+                        {emp.unit && (
+                          <p className="text-xs text-muted-foreground">{emp.unit}</p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0 ml-4">
-                    <div className="text-right hidden sm:block">
-                      {emp.position && (
-                        <p className="text-xs font-medium text-foreground">{emp.position.name}</p>
-                      )}
-                      {emp.unit && (
-                        <p className="text-xs text-muted-foreground">{emp.unit}</p>
-                      )}
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+              <Pagination
+                total={filtered.length}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+              />
+            </>
           )}
         </CardContent>
       </Card>

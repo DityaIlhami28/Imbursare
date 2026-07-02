@@ -5,7 +5,8 @@ import { getToken } from '@/lib/auth'
 import { api, type AmountPolicy } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Shield, Plus, X } from 'lucide-react'
+import { Shield, Plus, X, Search } from 'lucide-react'
+import { Pagination } from '@/components/ui/pagination'
 
 const LEVELS = ['staff', 'supervisor', 'manager', 'director', 'vp', 'c-level'] as const
 type Level = (typeof LEVELS)[number]
@@ -25,6 +26,9 @@ export default function PoliciesPage() {
   const [form, setForm] = useState({ maxAmount: '', positionLevel: 'staff' as Level, totalTransactions: '' })
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     const token = getToken()
@@ -61,6 +65,12 @@ export default function PoliciesPage() {
       setSaving(false)
     }
   }
+
+  const sorted = [...policies].sort((a, b) => a.level - b.level)
+  const filtered = sorted.filter((p) =>
+    (levelLabel[p.level] ?? '').toLowerCase().includes(search.toLowerCase())
+  )
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <div className="space-y-6">
@@ -132,9 +142,21 @@ export default function PoliciesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Shield className="h-4 w-4" /> Active Policies ({policies.length})
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="h-4 w-4" /> Active Policies ({filtered.length})
+            </CardTitle>
+            <div className="relative w-full sm:w-52">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by level…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring transition-shadow"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -143,18 +165,17 @@ export default function PoliciesPage() {
             </div>
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
-          ) : policies.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="text-center py-12">
               <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">
-                No spending policies yet. Create one to enforce limits on expense submissions.
+                {search ? 'No policies match your search.' : 'No spending policies yet. Create one to enforce limits on expense submissions.'}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {policies
-                .sort((a, b) => a.level - b.level)
-                .map((policy) => (
+            <>
+              <div className="divide-y divide-border">
+                {paginated.map((policy) => (
                   <div key={policy.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
                     <div>
                       <p className="text-sm font-semibold text-foreground">
@@ -174,7 +195,15 @@ export default function PoliciesPage() {
                     </div>
                   </div>
                 ))}
-            </div>
+              </div>
+              <Pagination
+                total={filtered.length}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+              />
+            </>
           )}
         </CardContent>
       </Card>

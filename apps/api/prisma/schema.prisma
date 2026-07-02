@@ -19,6 +19,7 @@ enum ExpenseStatus {
   APPROVED
   REJECTED
   REIMBURSED
+  REVISION
 }
 
 enum ApprovalStatus {
@@ -173,6 +174,8 @@ model Expense {
   amount Float
 
   unit String
+
+  expenseNumber String?
 
   status ExpenseStatus @default(DRAFT)
 

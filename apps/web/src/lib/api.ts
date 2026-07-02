@@ -18,11 +18,12 @@ function auth(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` }
 }
 
-export type ExpenseStatus = 'DRAFT' | 'SUBMIT' | 'APPROVED' | 'REJECTED' | 'REIMBURSED'
+export type ExpenseStatus = 'DRAFT' | 'SUBMIT' | 'APPROVED' | 'REJECTED' | 'REIMBURSED' | 'REVISION'
 export type CompanyRole = 'EMPLOYEE' | 'FINANCE' | 'ADMIN'
 
 export interface ExpenseSummary {
   id: string
+  expenseNumber: string | null
   title: string
   amount: number
   status: ExpenseStatus
@@ -31,6 +32,7 @@ export interface ExpenseSummary {
 
 export interface ExpenseDetail {
   id: string
+  expenseNumber: string | null
   title: string
   description: string
   amount: number
@@ -46,6 +48,19 @@ export interface ExpenseLog {
   message: string
   createdById: string
   createdAt: string
+}
+
+export interface PendingApproval {
+  id: string
+  expenseNumber: string | null
+  title: string
+  amount: number
+  status: ExpenseStatus
+  unit: string | null
+  category: { id: string; name: string } | null
+  submittedBy: string
+  createdAt: string
+  approvalNote: string | null
 }
 
 export interface EmployeeSummary {
@@ -197,7 +212,7 @@ export const api = {
         headers: auth(token),
       }),
     getAdminExpenses: (token: string) =>
-      request<(ExpenseSummary & { userId: string; companyId: string })[]>('/expense/company-expenses-for-admin', {
+      request<(ExpenseSummary & { userId: string; companyId: string; unit: string | null })[]>('/expense/company-expenses-for-admin', {
         headers: auth(token),
       }),
     getFinanceExpenses: (token: string) =>
@@ -212,5 +227,98 @@ export const api = {
       request<ExpenseLog[]>(`/expense/logs/${id}`, {
         headers: auth(token),
       }),
+    update: (
+      token: string,
+      id: string,
+      fields: { title?: string; description?: string; amount?: number; category?: string },
+      newFiles?: File[],
+      removeAttachmentIds?: string[],
+    ) => {
+      const fd = new FormData()
+      if (fields.title !== undefined) fd.append('title', fields.title)
+      if (fields.description !== undefined) fd.append('description', fields.description)
+      if (fields.amount !== undefined) fd.append('amount', String(fields.amount))
+      if (fields.category !== undefined) fd.append('category', fields.category)
+      newFiles?.forEach((f) => fd.append('files', f))
+      removeAttachmentIds?.forEach((rid) => fd.append('removeAttachmentIds', rid))
+      return fetch(`${BASE_URL}/expense/${id}`, {
+        method: 'PATCH',
+        headers: auth(token),
+        body: fd,
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body?.message ?? 'Request failed')
+        }
+        return res.json() as Promise<ExpenseDetail>
+      })
+    },
+    getPendingApprovals: (token: string) =>
+      request<PendingApproval[]>('/expense/pending-approvals', {
+        headers: auth(token),
+      }),
+    getAllApprovals: (token: string) =>
+      request<PendingApproval[]>('/expense/all-approvals', {
+        headers: auth(token),
+      }),
+    submit: (token: string, id: string) =>
+      request<{ message: string }>(`/expense/${id}/submit`, {
+        method: 'PATCH',
+        headers: auth(token),
+      }),
+    approve: (token: string, id: string, note?: string) =>
+      request<{ message: string }>(`/expense/${id}/approve`, {
+        method: 'PATCH',
+        headers: auth(token),
+        body: JSON.stringify({ note }),
+      }),
+    reject: (token: string, id: string, note?: string) =>
+      request<{ message: string }>(`/expense/${id}/reject`, {
+        method: 'PATCH',
+        headers: auth(token),
+        body: JSON.stringify({ note }),
+      }),
+    reimburse: (token: string, id: string) =>
+      request<{ message: string }>(`/expense/${id}/reimburse`, {
+        method: 'PATCH',
+        headers: auth(token),
+      }),
+    revision: (token: string, id: string, note: string) =>
+      request<{ message: string }>(`/expense/${id}/revision`, {
+        method: 'PATCH',
+        headers: auth(token),
+        body: JSON.stringify({ note }),
+      }),
+    scanAttachments: (token: string, id: string) =>
+      request<{ title: string | null; amount: number | null }>(`/expense/${id}/scan-attachments`, {
+        headers: auth(token),
+      }),
+    financeReject: (token: string, id: string, note: string) =>
+      request<{ message: string }>(`/expense/${id}/finance-reject`, {
+        method: 'PATCH',
+        headers: auth(token),
+        body: JSON.stringify({ note }),
+      }),
+    forceReject: (token: string, id: string, note: string) =>
+      request<{ message: string }>(`/expense/${id}/force-reject`, {
+        method: 'PATCH',
+        headers: auth(token),
+        body: JSON.stringify({ note }),
+      }),
+    scanReceipt: (token: string, file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return fetch(`${BASE_URL}/expense/scan-receipt`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body?.message ?? 'Scan failed')
+        }
+        return res.json() as Promise<{ title: string | null; amount: number | null }>
+      })
+    },
   },
 }

@@ -52,4 +52,19 @@ export class CompanyController {
       req.user.companyId,
     );
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @roles('ADMIN')
+  @Patch('employee/:id')
+  updateEmployee(
+    @Request() req,
+    @Param('id') employeeId: string,
+    @Body() body: UpdateEmployeeDto,
+  ) {
+    return this.companyService.updateEmployeeData(
+      employeeId,
+      body,
+      req.user.userId,
+    );
+  }
 }
