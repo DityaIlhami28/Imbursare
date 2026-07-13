@@ -1,12 +1,17 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CompanyRole } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+import { AuthService } from '@/auth/auth.service';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
 @Injectable()
 export class CompanyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private authService: AuthService,
+  ) {}
 
   async createCompany(userId: string, name: string) {
     const existingAdmin = await this.prisma.membership.findFirst({
@@ -67,33 +72,48 @@ export class CompanyService {
     role: CompanyRole,
   ) {
     let user = await this.prisma.user.findUnique({ where: { email } });
+    let isNewAccount = false;
 
     if (!user) {
-      const password = 'temp123';
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Provision a pending account with an unusable random password. The invite
+      // link (below) is the only way to set a real one — nothing is hardcoded.
+      const unusablePassword = await bcrypt.hash(randomBytes(24).toString('hex'), 10);
       user = await this.prisma.user.create({
         data: {
           email,
-          password: hashedPassword,
+          password: unusablePassword,
+          state: 0, // pending until the invite is accepted
         },
       });
-      const createdEmployee = await this.prisma.employee.create({
-        data: {
-          email,
-          fullName,
-          companyId,
-          userId: user.id,
-        },
+      isNewAccount = true;
+    }
+
+    // Ensure an employee profile exists for this company (covers the case where an
+    // already-registered user is added to a new company).
+    const existingEmployee = await this.prisma.employee.findFirst({
+      where: { userId: user.id, companyId },
+    });
+    if (!existingEmployee) {
+      await this.prisma.employee.create({
+        data: { email, fullName, companyId, userId: user.id },
       });
     }
 
-    return this.prisma.membership.create({
-      data: {
-        userId: user.id,
-        companyId,
-        role,
-      },
+    const existingMembership = await this.prisma.membership.findFirst({
+      where: { userId: user.id, companyId },
     });
+    if (existingMembership) {
+      throw new BadRequestException('This user is already a member of the company');
+    }
+
+    const membership = await this.prisma.membership.create({
+      data: { userId: user.id, companyId, role },
+    });
+
+    // Only freshly-provisioned accounts need an invite to set their password.
+    const inviteLink = isNewAccount ? await this.authService.createInvite(user.id) : null;
+
+    return { message: 'User added to company', membership, inviteLink };
   }
 
   async getCompanyEmployees(companyId: string) {

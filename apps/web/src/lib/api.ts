@@ -153,6 +153,22 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, password: string) =>
+      request<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password }),
+      }),
+    changePassword: (token: string, currentPassword: string, newPassword: string) =>
+      request<{ message: string }>('/auth/change-password', {
+        method: 'PATCH',
+        headers: auth(token),
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
   },
 
   user: {
@@ -170,7 +186,7 @@ export const api = {
         body: JSON.stringify(body),
       }),
     addUser: (token: string, body: { fullName: string; email: string; role: CompanyRole }) =>
-      request<unknown>('/company/add-user', {
+      request<{ message: string; inviteLink: string | null }>('/company/add-user', {
         method: 'POST',
         headers: auth(token),
         body: JSON.stringify(body),

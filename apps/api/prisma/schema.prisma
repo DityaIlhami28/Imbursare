@@ -34,6 +34,11 @@ enum OcrStatus {
   UNVERIFIED
 }
 
+enum PasswordTokenPurpose {
+  INVITE
+  RESET
+}
+
 model Company {
   id   String @id @default(uuid())
   name String
@@ -68,8 +73,29 @@ model User {
 
   logs ExpenseLog[]
 
+  passwordTokens PasswordToken[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PasswordToken {
+  id String @id @default(uuid())
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// sha256 of the raw token sent in the link; the raw token is never stored
+  tokenHash String @unique
+
+  purpose PasswordTokenPurpose
+
+  expiresAt DateTime
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Membership {

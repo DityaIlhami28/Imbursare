@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   ClipboardCheck,
+  Settings,
 } from 'lucide-react'
 
 interface NavItem {
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { label: 'Positions', href: '/positions', icon: Briefcase, roles: ['ADMIN'] },
   { label: 'Categories', href: '/categories', icon: Tag, roles: ['ADMIN', 'FINANCE'] },
   { label: 'Spending Policies', href: '/policies', icon: Shield, roles: ['ADMIN', 'FINANCE'] },
+  { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
