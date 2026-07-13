@@ -6,7 +6,7 @@ import { getToken } from '@/lib/auth'
 import { api, type PendingApproval, type ExpenseStatus } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/badge'
+import { StatusBadge, OcrBadge } from '@/components/ui/badge'
 import { ClipboardCheck, CheckCircle, XCircle, Tag, RotateCcw, ExternalLink, ShieldAlert, Search } from 'lucide-react'
 import { Pagination } from '@/components/ui/pagination'
 
@@ -119,7 +119,7 @@ function ApprovalRow({
             <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </Link>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-            <span className="text-xs text-muted-foreground truncate max-w-40">{expense.submittedBy}</span>
+            <span className="text-xs text-muted-foreground truncate max-w-40" title={expense.submittedBy}>{expense.requestedBy ?? expense.submittedBy}</span>
             <span className="text-muted-foreground/40 text-xs select-none">·</span>
             <span className="text-xs text-muted-foreground">
               {new Date(expense.createdAt).toLocaleDateString('en-GB', {
@@ -142,10 +142,11 @@ function ApprovalRow({
           </div>
         </div>
 
-        {/* Right side: amount + status */}
-        <div className="shrink-0 flex items-center gap-3">
-          <StatusBadge status={expense.status} />
-          <span className="text-sm font-bold tabular-nums text-foreground">
+        {/* Right side: validation + status + amount */}
+        <div className="shrink-0 flex items-center">
+          <div className="hidden sm:block w-28 shrink-0"><OcrBadge status={expense.ocrFlag ?? null} /></div>
+          <div className="w-28 shrink-0"><StatusBadge status={expense.status} /></div>
+          <span className="w-32 shrink-0 text-right text-sm font-bold tabular-nums text-foreground">
             {expense.amount.toLocaleString('id-ID', {
               style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
             })}
@@ -260,7 +261,9 @@ function ApprovalRow({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function ApproveRequestsPage() {
-  const [approvals, setApprovals] = useState<PendingApproval[]>([])
+  const [data, setData] = useState<PendingApproval[]>([])
+  const [total, setTotal] = useState(0)
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [filter, setFilter] = useState<ApprovalFilter>('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -268,42 +271,32 @@ export default function ApproveRequestsPage() {
   const [bulkApproving, setBulkApproving] = useState(false)
   const [bulkError, setBulkError] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  function load() {
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1) }, 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  useEffect(() => {
     const token = getToken()
     if (!token) return
     setLoading(true)
     setSelectedIds(new Set())
     setBulkError('')
-    api.expense.getAllApprovals(token)
-      .then(setApprovals)
+    api.expense.getAllApprovals(token, { page, pageSize, search: debouncedSearch, status: filter })
+      .then((res) => { setData(res.data); setTotal(res.total); setStatusCounts(res.statusCounts) })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }
+  }, [page, pageSize, filter, debouncedSearch, refreshKey])
 
-  useEffect(() => { load() }, [])
-
-  // When filter or search changes, clear selections and reset page
-  useEffect(() => { setSelectedIds(new Set()); setPage(1) }, [filter, search])
-
-  const searched = approvals.filter((e) => {
-    const q = search.toLowerCase()
-    return (
-      e.title.toLowerCase().includes(q) ||
-      e.submittedBy.toLowerCase().includes(q) ||
-      (e.expenseNumber ?? '').toLowerCase().includes(q)
-    )
-  })
-  const filtered = filter === 'ALL'
-    ? searched
-    : searched.filter((e) => e.status === (filter as ExpenseStatus))
-
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const allCount = Object.values(statusCounts).reduce((a, b) => a + b, 0)
 
   // Selectable = SUBMIT items on the current page
-  const selectableIds = paginated.filter((e) => e.status === 'SUBMIT').map((e) => e.id)
+  const selectableIds = data.filter((e) => e.status === 'SUBMIT').map((e) => e.id)
   const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
 
   function toggleSelect(id: string, checked: boolean) {
@@ -333,22 +326,17 @@ export default function ApproveRequestsPage() {
     setBulkError('')
     const ids = [...selectedIds]
     const results = await Promise.allSettled(ids.map((id) => api.expense.approve(token, id)))
-    const approved = ids.filter((_, i) => results[i].status === 'fulfilled')
     const failed = ids.filter((_, i) => results[i].status === 'rejected')
-    setApprovals((prev) => prev.map((e) =>
-      approved.includes(e.id) ? { ...e, status: 'APPROVED' as ExpenseStatus } : e
-    ))
-    setSelectedIds(new Set(failed))
-    if (failed.length > 0) setBulkError(`${failed.length} expense(s) could not be approved.`)
     setBulkApproving(false)
+    if (failed.length > 0) setBulkError(`${failed.length} expense(s) could not be approved.`)
+    setRefreshKey((k) => k + 1)
   }
 
-  function handleDone(id: string, newStatus: ExpenseStatus) {
-    setApprovals((prev) => prev.map((e) => e.id === id ? { ...e, status: newStatus } : e))
-    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
+  function handleDone() {
+    setRefreshKey((k) => k + 1)
   }
 
-  const selectedTotal = approvals
+  const selectedTotal = data
     .filter((e) => selectedIds.has(e.id))
     .reduce((sum, e) => sum + e.amount, 0)
 
@@ -364,14 +352,12 @@ export default function ApproveRequestsPage() {
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         {APPROVAL_FILTERS.map((f) => {
           const cfg = FILTER_CONFIG[f]
-          const count = f === 'ALL'
-            ? searched.length
-            : searched.filter((e) => e.status === (f as ExpenseStatus)).length
+          const count = f === 'ALL' ? allCount : statusCounts[f] ?? 0
           const active = filter === f
           return (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setPage(1) }}
               className={`rounded-xl border p-3 text-left transition-all ${
                 active
                   ? `${cfg.activeBg} ${cfg.activeBorder} ring-1 ring-inset ${cfg.activeBorder}`
@@ -425,8 +411,8 @@ export default function ApproveRequestsPage() {
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-base">
                 {filter === 'ALL'
-                  ? `All Approvals (${searched.length})`
-                  : `${FILTER_CONFIG[filter].label} (${filtered.length})`}
+                  ? `All Approvals (${allCount})`
+                  : `${FILTER_CONFIG[filter].label} (${total})`}
               </CardTitle>
               <div className="relative w-56 shrink-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -462,34 +448,44 @@ export default function ApproveRequestsPage() {
             </div>
           ) : error ? (
             <p className="px-4 pb-4 text-sm text-destructive">{error}</p>
-          ) : filtered.length === 0 ? (
+          ) : data.length === 0 ? (
             <div className="py-16 text-center">
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <ClipboardCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <p className="font-semibold text-foreground">
-                {search ? 'No results found' : filter === 'SUBMIT' ? 'All caught up!' : `No ${FILTER_CONFIG[filter].label.toLowerCase()} items`}
+                {debouncedSearch ? 'No results found' : filter === 'SUBMIT' ? 'All caught up!' : `No ${FILTER_CONFIG[filter].label.toLowerCase()} items`}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {search ? 'Try a different keyword.' : filter === 'SUBMIT' ? 'No pending approvals at this time.' : 'Switch filters to see other items.'}
+                {debouncedSearch ? 'Try a different keyword.' : filter === 'SUBMIT' ? 'No pending approvals at this time.' : 'Switch filters to see other items.'}
               </p>
             </div>
           ) : (
             <>
+              <div className="hidden sm:flex items-center gap-3 px-4 py-2 border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="w-4 shrink-0" />
+                <div className="w-7 shrink-0" />
+                <span className="flex-1 min-w-0">Requestor &amp; Expense</span>
+                <div className="shrink-0 flex items-center">
+                  <span className="hidden sm:block w-28 shrink-0">OCR Validation</span>
+                  <span className="w-28 shrink-0">Status</span>
+                  <span className="w-32 shrink-0 text-right">Amount</span>
+                </div>
+              </div>
               <div className="divide-y divide-border">
-                {paginated.map((expense) => (
+                {data.map((expense) => (
                   <ApprovalRow
                     key={expense.id}
                     expense={expense}
                     checked={selectedIds.has(expense.id)}
                     onCheckChange={(c) => toggleSelect(expense.id, c)}
-                    onDone={() => handleDone(expense.id, 'APPROVED')}
+                    onDone={handleDone}
                   />
                 ))}
               </div>
               <div className="px-4 pb-4">
                 <Pagination
-                  total={filtered.length}
+                  total={total}
                   page={page}
                   pageSize={pageSize}
                   onPageChange={setPage}

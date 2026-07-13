@@ -9,7 +9,7 @@ import { api, type ExpenseDetail, type ExpenseLog, type ExpenseStatus, type Cate
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/badge'
+import { StatusBadge, OcrBadge } from '@/components/ui/badge'
 import {
   ArrowLeft, Paperclip, Clock, FileText, Download,
   CheckCircle, XCircle, Send, CreditCard, Pencil, RotateCcw, AlertCircle, ScanLine, Sparkles, ShieldAlert, Plus, Trash2,
@@ -264,7 +264,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
     FINANCE:  { href: '/finance/expenses', label: 'Back to Unit Expenses' },
     EMPLOYEE: { href: '/expenses',         label: 'Back to My Expenses' },
   }
-  const back = (fromParam && fromConfig[fromParam])
+  const back = (fromParam ? fromConfig[fromParam] : undefined)
     ?? roleConfig[userRole ?? '']
     ?? { href: '/expenses', label: 'Back to expenses' }
 
@@ -550,7 +550,15 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ id: st
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-foreground">{att.fileName}</p>
-                          <p className="text-xs text-muted-foreground">{formatSize(att.size)}</p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+                            <span className="text-xs text-muted-foreground">{formatSize(att.size)}</span>
+                            <OcrBadge status={att.ocrStatus} />
+                            {att.ocrStatus === 'VALID' && att.ocrAmount != null && (
+                              <span className="text-[11px] text-muted-foreground">
+                                · read {att.ocrAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <a
                           href={att.fileUrl}

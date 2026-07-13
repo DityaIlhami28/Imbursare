@@ -18,8 +18,44 @@ function auth(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` }
 }
 
+export interface ListParams {
+  page?: number
+  pageSize?: number
+  search?: string
+  status?: string
+}
+
+export interface Paged<T> {
+  data: T[]
+  total: number
+  statusCounts: Record<string, number>
+  statusSums: Record<string, number>
+}
+
+function qs(params?: ListParams): string {
+  if (!params) return ''
+  const sp = new URLSearchParams()
+  if (params.page) sp.set('page', String(params.page))
+  if (params.pageSize) sp.set('pageSize', String(params.pageSize))
+  if (params.search?.trim()) sp.set('search', params.search.trim())
+  if (params.status && params.status !== 'ALL') sp.set('status', params.status)
+  const s = sp.toString()
+  return s ? `?${s}` : ''
+}
+
 export type ExpenseStatus = 'DRAFT' | 'SUBMIT' | 'APPROVED' | 'REJECTED' | 'REIMBURSED' | 'REVISION'
 export type CompanyRole = 'EMPLOYEE' | 'FINANCE' | 'ADMIN'
+export type OcrStatus = 'VALID' | 'INVALID' | 'UNVERIFIED'
+
+export interface Attachment {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: string
+  size: number
+  ocrStatus: OcrStatus | null
+  ocrAmount: number | null
+}
 
 export interface ExpenseSummary {
   id: string
@@ -28,6 +64,8 @@ export interface ExpenseSummary {
   amount: number
   status: ExpenseStatus
   createdAt: string
+  requestedBy?: string
+  ocrFlag?: OcrStatus | null
 }
 
 export interface ExpenseDetail {
@@ -37,7 +75,7 @@ export interface ExpenseDetail {
   description: string
   amount: number
   status: ExpenseStatus
-  attachments: { id: string; fileName: string; fileUrl: string; fileType: string; size: number }[]
+  attachments: Attachment[]
   category: { id: string; name: string } | null
   createdAt: string
 }
@@ -59,8 +97,10 @@ export interface PendingApproval {
   unit: string | null
   category: { id: string; name: string } | null
   submittedBy: string
+  requestedBy?: string
   createdAt: string
   approvalNote: string | null
+  ocrFlag?: OcrStatus | null
 }
 
 export interface EmployeeSummary {
@@ -207,16 +247,16 @@ export const api = {
         }
         return res.json() as Promise<{ message: string; expenseId: string; status: string }>
       }),
-    getMyExpenses: (token: string) =>
-      request<ExpenseSummary[]>('/expense/my-expenses', {
+    getMyExpenses: (token: string, params?: ListParams) =>
+      request<Paged<ExpenseSummary>>(`/expense/my-expenses${qs(params)}`, {
         headers: auth(token),
       }),
-    getAdminExpenses: (token: string) =>
-      request<(ExpenseSummary & { userId: string; companyId: string; unit: string | null })[]>('/expense/company-expenses-for-admin', {
+    getAdminExpenses: (token: string, params?: ListParams) =>
+      request<Paged<ExpenseSummary & { userId: string; companyId: string; unit: string | null }>>(`/expense/company-expenses-for-admin${qs(params)}`, {
         headers: auth(token),
       }),
-    getFinanceExpenses: (token: string) =>
-      request<ExpenseSummary[]>('/expense/company-expenses-for-finance', {
+    getFinanceExpenses: (token: string, params?: ListParams) =>
+      request<Paged<ExpenseSummary>>(`/expense/company-expenses-for-finance${qs(params)}`, {
         headers: auth(token),
       }),
     getDetails: (token: string, id: string) =>
@@ -257,8 +297,8 @@ export const api = {
       request<PendingApproval[]>('/expense/pending-approvals', {
         headers: auth(token),
       }),
-    getAllApprovals: (token: string) =>
-      request<PendingApproval[]>('/expense/all-approvals', {
+    getAllApprovals: (token: string, params?: ListParams) =>
+      request<Paged<PendingApproval>>(`/expense/all-approvals${qs(params)}`, {
         headers: auth(token),
       }),
     submit: (token: string, id: string) =>
@@ -317,7 +357,7 @@ export const api = {
           const body = await res.json().catch(() => ({}))
           throw new Error(body?.message ?? 'Scan failed')
         }
-        return res.json() as Promise<{ title: string | null; amount: number | null }>
+        return res.json() as Promise<{ title: string | null; amount: number | null; isReceipt: boolean | null }>
       })
     },
   },

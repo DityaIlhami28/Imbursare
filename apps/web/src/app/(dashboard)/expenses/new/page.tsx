@@ -7,7 +7,7 @@ import { getToken } from '@/lib/auth'
 import { api, type Category } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Paperclip, X, ArrowLeft, ScanLine, Sparkles } from 'lucide-react'
+import { Paperclip, X, ArrowLeft, ScanLine, Sparkles, ShieldAlert, AlertTriangle } from 'lucide-react'
 
 const inputCls = 'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-shadow disabled:opacity-50'
 const labelCls = 'text-sm font-medium text-foreground'
@@ -26,6 +26,8 @@ export default function NewExpensePage() {
   const [catLoading, setCatLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
   const [scanSuccess, setScanSuccess] = useState(false)
+  const [scannedAmount, setScannedAmount] = useState<number | null>(null)
+  const [hasNonReceipt, setHasNonReceipt] = useState(false)
 
   useEffect(() => {
     const token = getToken()
@@ -50,6 +52,8 @@ export default function NewExpensePage() {
         title: firstTitle ?? prev.title,
         amount: totalAmount > 0 ? String(totalAmount) : prev.amount,
       }))
+      setScannedAmount(totalAmount > 0 ? totalAmount : null)
+      setHasNonReceipt(results.some((r) => r.isReceipt === false))
       setScanSuccess(true)
     } catch {
       // silently fail — user can fill fields manually
@@ -57,6 +61,10 @@ export default function NewExpensePage() {
       setScanning(false)
     }
   }
+
+  // Client-side mirror of the server's submit-time reconciliation (OCR_TOLERANCE = 5%).
+  const overClaim =
+    scannedAmount !== null && Number(form.amount) > scannedAmount * 1.05
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? [])
@@ -209,10 +217,32 @@ export default function NewExpensePage() {
                 </ul>
               )}
 
-              {scanSuccess && (
+              {scanSuccess && !overClaim && !hasNonReceipt && (
                 <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1.5">
                   <Sparkles className="h-3 w-3" /> Receipt scanned — review the fields below before submitting.
                 </p>
+              )}
+
+              {hasNonReceipt && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    One of your files doesn&apos;t look like a receipt. You can still submit, but it will be flagged as
+                    unverified for your approver.
+                  </p>
+                </div>
+              )}
+
+              {overClaim && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-800 dark:bg-red-900/20">
+                  <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    You&apos;re claiming more than the scanned receipt total
+                    {scannedAmount !== null && (
+                      <> (Rp {scannedAmount.toLocaleString('id-ID')})</>
+                    )}. This will be blocked when you submit for approval.
+                  </p>
+                </div>
               )}
             </div>
 

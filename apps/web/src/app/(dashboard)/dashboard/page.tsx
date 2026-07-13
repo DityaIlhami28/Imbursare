@@ -529,17 +529,17 @@ export default function DashboardPage() {
 
     if (userRole === 'ADMIN') {
       api.expense.getAdminExpenses(token)
-        .then(setAdminExpenses)
+        .then((res) => setAdminExpenses(res.data))
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false))
     } else if (userRole === 'FINANCE') {
       api.expense.getFinanceExpenses(token)
-        .then(setExpenses)
+        .then((res) => setExpenses(res.data))
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false))
     } else {
       api.expense.getMyExpenses(token)
-        .then(setExpenses)
+        .then((res) => setExpenses(res.data))
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false))
     }

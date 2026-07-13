@@ -1,29 +1,31 @@
 import {
   IsString,
   IsNumber,
-  IsUUID,
   IsOptional,
+  IsNotEmpty,
   Min,
-  isString,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateExpenseDto {
   @IsString()
-  title?: string;
+  @IsNotEmpty()
+  title!: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
-  @IsOptional()
-  amount?: number;
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  amount!: number;
 
   @IsString()
-  category?: string;
-
+  @IsNotEmpty()
+  category!: string;
 
   @IsOptional()
   @IsString()
   unit?: string;
-
 }

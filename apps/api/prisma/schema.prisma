@@ -28,6 +28,12 @@ enum ApprovalStatus {
   REJECTED
 }
 
+enum OcrStatus {
+  VALID
+  INVALID
+  UNVERIFIED
+}
+
 model Company {
   id   String @id @default(uuid())
   name String
@@ -207,6 +213,7 @@ model Expense {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([companyId, expenseNumber])
   @@index([status])
   @@index([companyId])
   @@index([userId])
@@ -242,6 +249,12 @@ model ExpenseAttachment {
   fileType String?
 
   size Int?
+
+  /// per-receipt OCR validation result, stamped at submit time
+  ocrStatus OcrStatus?
+
+  /// amount read from this receipt by OCR (IDR)
+  ocrAmount Float?
 
   expenseId String
   expense Expense @relation( fields: [expenseId], references: [id], onDelete: Cascade )

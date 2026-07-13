@@ -1,4 +1,5 @@
-import { type ExpenseStatus } from '@/lib/api'
+import { ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react'
+import { type ExpenseStatus, type OcrStatus } from '@/lib/api'
 
 const statusConfig: Record<ExpenseStatus, { label: string; className: string }> = {
   DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
@@ -14,6 +15,22 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}>
       {config.label}
+    </span>
+  )
+}
+
+const ocrConfig: Record<OcrStatus, { label: string; className: string; Icon: typeof ShieldCheck }> = {
+  VALID: { label: 'Valid', className: 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900/30', Icon: ShieldCheck },
+  INVALID: { label: 'Not valid', className: 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/30', Icon: ShieldAlert },
+  UNVERIFIED: { label: 'Unverified', className: 'text-muted-foreground bg-muted', Icon: ShieldQuestion },
+}
+
+export function OcrBadge({ status }: { status: OcrStatus | null }) {
+  if (!status) return null
+  const { label, className, Icon } = ocrConfig[status]
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${className}`}>
+      <Icon className="h-3 w-3" /> {label}
     </span>
   )
 }

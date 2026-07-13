@@ -5,6 +5,7 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   UseGuards,
   Request,
   UseInterceptors,
@@ -12,6 +13,7 @@ import {
   UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
+import type { ExpenseListQuery } from './expense.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { roles } from '../auth/roles/roles.decarator';
@@ -66,24 +68,33 @@ export class ExpenseController {
     );
   }
 
+  private parseListQuery(q: any): ExpenseListQuery {
+    return {
+      page: q?.page ? parseInt(q.page, 10) : undefined,
+      pageSize: q?.pageSize ? parseInt(q.pageSize, 10) : undefined,
+      search: typeof q?.search === 'string' ? q.search : undefined,
+      status: typeof q?.status === 'string' ? q.status : undefined,
+    };
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('my-expenses')
-  async getMyExpenses(@Request() req: any) {
-    return await this.expenseService.getMyExpenses(req.user.userId, req.user.companyId);
+  async getMyExpenses(@Request() req: any, @Query() q: any) {
+    return await this.expenseService.getMyExpenses(req.user.userId, req.user.companyId, this.parseListQuery(q));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @roles('ADMIN')
   @Get('company-expenses-for-admin')
-  async getCompanyExpensesForAdmin(@Request() req: any) {
-    return await this.expenseService.getCompanyExpensesForAdmin(req.user.userId, req.user.companyId);
+  async getCompanyExpensesForAdmin(@Request() req: any, @Query() q: any) {
+    return await this.expenseService.getCompanyExpensesForAdmin(req.user.userId, req.user.companyId, this.parseListQuery(q));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @roles('FINANCE')
   @Get('company-expenses-for-finance')
-  async getCompanyExpensesForFinance(@Request() req: any) {
-    return await this.expenseService.getCompanyExpensesForFinance(req.user.userId, req.user.companyId);
+  async getCompanyExpensesForFinance(@Request() req: any, @Query() q: any) {
+    return await this.expenseService.getCompanyExpensesForFinance(req.user.userId, req.user.companyId, this.parseListQuery(q));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -94,8 +105,8 @@ export class ExpenseController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('all-approvals')
-  async getAllApprovals(@Request() req: any) {
-    return await this.expenseService.getAllApprovals(req.user.userId, req.user.companyId);
+  async getAllApprovals(@Request() req: any, @Query() q: any) {
+    return await this.expenseService.getAllApprovals(req.user.userId, req.user.companyId, this.parseListQuery(q));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
